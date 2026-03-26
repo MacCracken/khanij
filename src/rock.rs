@@ -183,6 +183,49 @@ impl Rock {
     }
 }
 
+/// Bulk density of a rock from mineral grain density and porosity.
+///
+/// ρ_bulk = ρ_grain × (1 - φ) + ρ_fluid × φ
+///
+/// - `grain_density`: mineral grain density in g/cm³
+/// - `porosity`: pore volume fraction (0.0-1.0)
+/// - `fluid_density`: pore fluid density in g/cm³ (water: 1.0, air: 0.001)
+///
+/// Returns bulk density in g/cm³.
+#[must_use]
+pub fn bulk_density(grain_density: f32, porosity: f32, fluid_density: f32) -> f32 {
+    grain_density * (1.0 - porosity) + fluid_density * porosity
+}
+
+/// Bulk density of a rock from a mixture of minerals.
+///
+/// - `minerals`: slice of `(density, volume_fraction)` pairs. Volume fractions
+///   should sum to 1.0 (the solid portion).
+/// - `porosity`: pore volume fraction (0.0-1.0)
+/// - `fluid_density`: pore fluid density in g/cm³
+///
+/// Returns bulk density in g/cm³.
+#[must_use]
+pub fn bulk_density_from_minerals(
+    minerals: &[(f32, f32)],
+    porosity: f32,
+    fluid_density: f32,
+) -> f32 {
+    let grain_density: f32 = minerals.iter().map(|(d, f)| d * f).sum();
+    bulk_density(grain_density, porosity, fluid_density)
+}
+
+/// Porosity from bulk and grain density (assuming air-filled pores).
+///
+/// φ = 1 - ρ_bulk / ρ_grain
+#[must_use]
+pub fn porosity_from_density(bulk_density: f32, grain_density: f32) -> f32 {
+    if grain_density <= 0.0 {
+        return 0.0;
+    }
+    (1.0 - bulk_density / grain_density).clamp(0.0, 1.0)
+}
+
 /// Rock cycle transition using a typed geological process.
 #[must_use]
 pub fn rock_cycle_next(rock_type: RockType, process: GeologicalProcess) -> Option<RockType> {
@@ -265,5 +308,36 @@ mod tests {
             )
             .is_some()
         );
+    }
+
+    #[test]
+    fn bulk_density_no_porosity() {
+        let bd = bulk_density(2.65, 0.0, 1.0);
+        assert!((bd - 2.65).abs() < 0.01);
+    }
+
+    #[test]
+    fn bulk_density_with_water() {
+        // Sandstone: grain 2.65, porosity 15%, water-filled
+        let bd = bulk_density(2.65, 0.15, 1.0);
+        // Expected: 2.65*0.85 + 1.0*0.15 = 2.4025
+        assert!((bd - 2.4025).abs() < 0.01);
+    }
+
+    #[test]
+    fn bulk_density_from_mineral_mix() {
+        // Granite: quartz (2.65, 30%), feldspar (2.56, 60%), mica (2.82, 10%)
+        let minerals = [(2.65, 0.30), (2.56, 0.60), (2.82, 0.10)];
+        let bd = bulk_density_from_minerals(&minerals, 0.01, 0.001);
+        assert!(bd > 2.5 && bd < 2.7);
+    }
+
+    #[test]
+    fn porosity_from_density_roundtrip() {
+        let grain = 2.65_f32;
+        let phi = 0.15_f32;
+        let bd = bulk_density(grain, phi, 0.001); // air-filled
+        let recovered = porosity_from_density(bd, grain);
+        assert!((recovered - phi).abs() < 0.01);
     }
 }

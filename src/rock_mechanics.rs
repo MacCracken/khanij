@@ -338,6 +338,136 @@ pub fn infinite_slope_safety_factor(
     resisting / driving
 }
 
+// ---------------------------------------------------------------------------
+// Seismic velocity-depth profile (requires thermodynamics + mechanics)
+// ---------------------------------------------------------------------------
+
+/// Seismic P-wave velocity at depth, accounting for temperature effects.
+///
+/// Velocity decreases with temperature as elastic moduli soften:
+/// Vp(T) = Vp_0 × (1 - α·(T - T_ref))
+///
+/// where α ≈ 0.0004 per °C (typical for crustal rocks).
+///
+/// - `material`: rock material properties
+/// - `temperature_c`: temperature at depth in °C
+/// - `reference_temp_c`: reference temperature (typically 20°C)
+///
+/// Requires the `mechanics` feature (thermodynamics optional — caller provides T).
+#[must_use]
+pub fn p_wave_at_temperature(
+    material: &Material,
+    temperature_c: f64,
+    reference_temp_c: f64,
+) -> f64 {
+    let vp0 = p_wave_velocity(material);
+    let alpha = 0.0004; // velocity reduction coefficient per °C
+    let correction = 1.0 - alpha * (temperature_c - reference_temp_c);
+    vp0 * correction.max(0.5) // never reduce below 50% of reference
+}
+
+/// Seismic S-wave velocity at depth with temperature correction.
+#[must_use]
+pub fn s_wave_at_temperature(
+    material: &Material,
+    temperature_c: f64,
+    reference_temp_c: f64,
+) -> f64 {
+    let vs0 = s_wave_velocity(material);
+    let alpha = 0.0005; // shear modulus more sensitive to temperature
+    let correction = 1.0 - alpha * (temperature_c - reference_temp_c);
+    vs0 * correction.max(0.5)
+}
+
+/// Build a velocity-depth profile.
+///
+/// - `material`: rock material properties
+/// - `surface_temp_c`: surface temperature in °C
+/// - `gradient_c_per_km`: geothermal gradient (typical: 25°C/km)
+/// - `max_depth_km`: maximum depth in km
+/// - `steps`: number of depth points
+///
+/// Returns `Vec<(depth_km, Vp_m_s, Vs_m_s)>`.
+#[must_use]
+pub fn velocity_depth_profile(
+    material: &Material,
+    surface_temp_c: f64,
+    gradient_c_per_km: f64,
+    max_depth_km: f64,
+    steps: usize,
+) -> Vec<(f64, f64, f64)> {
+    let step_size = max_depth_km / steps as f64;
+    (0..=steps)
+        .map(|i| {
+            let depth = step_size * i as f64;
+            let temp = surface_temp_c + gradient_c_per_km * depth;
+            let vp = p_wave_at_temperature(material, temp, surface_temp_c);
+            let vs = s_wave_at_temperature(material, temp, surface_temp_c);
+            (depth, vp, vs)
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
+// Weathering-mechanics feedback
+// ---------------------------------------------------------------------------
+
+/// Degraded material properties after weathering.
+///
+/// Weathering reduces Young's modulus, yield strength, and increases effective
+/// porosity. The `weathering_fraction` (0.0 = fresh, 1.0 = fully weathered)
+/// controls the degradation.
+///
+/// Returns a new `Material` with reduced mechanical properties.
+#[must_use]
+pub fn weathered_material(material: &Material, weathering_fraction: f64) -> Material {
+    let w = weathering_fraction.clamp(0.0, 1.0);
+    Material {
+        name: format!("{} (weathered {:.0}%)", material.name, w * 100.0),
+        youngs_modulus: material.youngs_modulus * (1.0 - 0.9 * w), // up to 90% reduction
+        poisson_ratio: material.poisson_ratio * (1.0 + 0.3 * w),   // slight increase
+        yield_strength: material.yield_strength * (1.0 - 0.95 * w), // nearly total loss
+        ultimate_tensile_strength: material.ultimate_tensile_strength * (1.0 - 0.95 * w),
+        density: material.density * (1.0 - 0.15 * w), // slight decrease
+        thermal_expansion: material.thermal_expansion * (1.0 + 0.5 * w), // increase
+    }
+}
+
+/// Estimate how many years of weathering until rock fails under its own weight.
+///
+/// Finds when the degraded yield strength falls below the lithostatic stress
+/// at a given depth.
+///
+/// - `material`: fresh rock properties
+/// - `depth_m`: depth of interest in metres
+/// - `gravity`: m/s² (9.81)
+/// - `weathering_rate`: fraction weathered per year (e.g., 1e-6 for slow granite)
+///
+/// Returns time to failure in years, or `None` if the rock can sustain the load
+/// indefinitely.
+#[must_use]
+pub fn time_to_weathering_failure(
+    material: &Material,
+    depth_m: f64,
+    gravity: f64,
+    weathering_rate: f64,
+) -> Option<f64> {
+    if weathering_rate <= 0.0 {
+        return None;
+    }
+    let stress = material.density * gravity * depth_m;
+    // Find w where yield_strength * (1 - 0.95w) = stress
+    // w = (1 - stress/yield_strength) / 0.95
+    let w_fail = (1.0 - stress / material.yield_strength) / 0.95;
+    if w_fail <= 0.0 {
+        Some(0.0) // already failed
+    } else if w_fail >= 1.0 {
+        None // never fails
+    } else {
+        Some(w_fail / weathering_rate)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -552,5 +682,86 @@ mod tests {
         let (alpha, k) = mohr_coulomb_to_drucker_prager(FRAC_PI_6, 10e6);
         assert!(alpha > 0.0);
         assert!(k > 0.0);
+    }
+
+    // --- Seismic attenuation tests ---
+
+    #[test]
+    fn vp_decreases_with_temperature() {
+        let mat = granite_material();
+        let cold = p_wave_at_temperature(&mat, 20.0, 20.0);
+        let hot = p_wave_at_temperature(&mat, 500.0, 20.0);
+        assert!(hot < cold);
+    }
+
+    #[test]
+    fn vs_decreases_with_temperature() {
+        let mat = granite_material();
+        let cold = s_wave_at_temperature(&mat, 20.0, 20.0);
+        let hot = s_wave_at_temperature(&mat, 500.0, 20.0);
+        assert!(hot < cold);
+    }
+
+    #[test]
+    fn velocity_at_reference_temp_equals_base() {
+        let mat = granite_material();
+        let vp_base = p_wave_velocity(&mat);
+        let vp_ref = p_wave_at_temperature(&mat, 20.0, 20.0);
+        assert!((vp_base - vp_ref).abs() < 0.01);
+    }
+
+    #[test]
+    fn velocity_depth_profile_monotonic_decrease() {
+        let mat = granite_material();
+        let profile = velocity_depth_profile(&mat, 15.0, 25.0, 30.0, 10);
+        assert_eq!(profile.len(), 11);
+        for pair in profile.windows(2) {
+            assert!(pair[1].1 <= pair[0].1, "Vp should decrease with depth");
+            assert!(pair[1].2 <= pair[0].2, "Vs should decrease with depth");
+        }
+    }
+
+    // --- Weathering-mechanics feedback tests ---
+
+    #[test]
+    fn weathered_granite_weaker() {
+        let fresh = granite_material();
+        let degraded = weathered_material(&fresh, 0.5);
+        assert!(degraded.youngs_modulus < fresh.youngs_modulus);
+        assert!(degraded.yield_strength < fresh.yield_strength);
+    }
+
+    #[test]
+    fn fully_weathered_very_weak() {
+        let fresh = granite_material();
+        let saprolite = weathered_material(&fresh, 1.0);
+        assert!(saprolite.youngs_modulus < fresh.youngs_modulus * 0.15);
+        assert!(saprolite.yield_strength < fresh.yield_strength * 0.10);
+    }
+
+    #[test]
+    fn unweathered_unchanged() {
+        let fresh = granite_material();
+        let same = weathered_material(&fresh, 0.0);
+        assert!((same.youngs_modulus - fresh.youngs_modulus).abs() < 1.0);
+    }
+
+    #[test]
+    fn time_to_failure_finite_at_depth() {
+        let mat = granite_material();
+        let time = time_to_weathering_failure(&mat, 3000.0, 9.81, 1e-6);
+        assert!(time.is_some());
+        assert!(time.unwrap() > 0.0);
+    }
+
+    #[test]
+    fn time_to_failure_none_for_shallow() {
+        let mat = granite_material();
+        // Shallow — stress much less than yield strength even at full weathering
+        let time = time_to_weathering_failure(&mat, 100.0, 9.81, 1e-6);
+        assert!(
+            time.is_none(),
+            "Very shallow rock should never fail under own weight"
+        );
     }
 }

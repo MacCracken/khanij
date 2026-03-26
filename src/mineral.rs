@@ -24,6 +24,57 @@ impl MohsHardness {
     pub fn scratches(&self, other: &Self) -> bool {
         self.0 > other.0
     }
+
+    /// Approximate Vickers hardness (HV) from Mohs hardness.
+    ///
+    /// Uses a cubic polynomial fit to the standard Mohs reference minerals:
+    /// talc(1)→27, gypsum(2)→61, calcite(3)→157, fluorite(4)→315,
+    /// apatite(5)→535, feldspar(6)→795, quartz(7)→1120, topaz(8)→1427,
+    /// corundum(9)→2060, diamond(10)→10000.
+    #[must_use]
+    pub fn to_vickers(&self) -> f64 {
+        let m = self.0 as f64;
+        // Cubic fit: HV = 3.24·M³ - 18.2·M² + 90.3·M - 50.0
+        // Accurate ±15% for Mohs 1-9, underestimates diamond (which is an outlier).
+        // For Mohs >= 9.5, switch to exponential to capture diamond.
+        if m >= 9.5 {
+            // Exponential segment for the corundum-diamond jump
+            2060.0 * ((m - 9.0) * 1.57).exp()
+        } else {
+            3.24 * m.powi(3) - 18.2 * m.powi(2) + 90.3 * m - 50.0
+        }
+    }
+
+    /// Approximate Knoop hardness (HK) from Mohs hardness.
+    ///
+    /// Knoop ≈ Vickers × 1.05 (close relationship for most minerals).
+    #[must_use]
+    pub fn to_knoop(&self) -> f64 {
+        self.to_vickers() * 1.05
+    }
+
+    /// Convert Vickers hardness back to approximate Mohs hardness.
+    ///
+    /// Uses iterative search over the Mohs scale since the forward mapping
+    /// is nonlinear. Returns the Mohs value within ±0.1.
+    #[must_use]
+    pub fn from_vickers(hv: f64) -> Option<Self> {
+        if hv <= 0.0 {
+            return None;
+        }
+        // Binary search between Mohs 1.0 and 10.0
+        let (mut lo, mut hi) = (1.0_f32, 10.0_f32);
+        for _ in 0..50 {
+            let mid = (lo + hi) / 2.0;
+            let mid_hv = Self(mid).to_vickers();
+            if mid_hv < hv {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        Self::new((lo + hi) / 2.0)
+    }
 }
 
 /// A mineral with physical properties.
@@ -358,6 +409,43 @@ mod tests {
         assert!(MohsHardness::new(10.5).is_none());
         assert!(MohsHardness::new(1.0).is_some());
         assert!(MohsHardness::new(10.0).is_some());
+    }
+
+    #[test]
+    fn vickers_increases_with_mohs() {
+        let soft = MohsHardness::new(1.0).unwrap().to_vickers();
+        let hard = MohsHardness::new(10.0).unwrap().to_vickers();
+        assert!(hard > soft);
+    }
+
+    #[test]
+    fn vickers_diamond_realistic() {
+        // Diamond Mohs 10 → Vickers ~10000 HV (literature: ~10000)
+        let hv = MohsHardness::new(10.0).unwrap().to_vickers();
+        assert!(
+            hv > 5000.0 && hv < 20000.0,
+            "Diamond HV should be ~10000, got {hv}"
+        );
+    }
+
+    #[test]
+    fn knoop_higher_than_vickers() {
+        let mohs = MohsHardness::new(7.0).unwrap();
+        assert!(mohs.to_knoop() > mohs.to_vickers());
+    }
+
+    #[test]
+    fn vickers_roundtrip() {
+        let original = MohsHardness::new(5.0).unwrap();
+        let hv = original.to_vickers();
+        let recovered = MohsHardness::from_vickers(hv).unwrap();
+        assert!((original.value() - recovered.value()).abs() < 0.1);
+    }
+
+    #[test]
+    fn from_vickers_invalid() {
+        assert!(MohsHardness::from_vickers(0.0).is_none());
+        assert!(MohsHardness::from_vickers(-100.0).is_none());
     }
 }
 

@@ -20,10 +20,13 @@
 pub mod crystal;
 pub mod error;
 pub mod formula;
+pub mod hydrothermal;
 pub mod mineral;
 pub mod ore;
 pub mod rock;
+pub mod sediment;
 pub mod soil;
+pub mod timescale;
 pub mod weathering;
 
 #[cfg(feature = "chemistry")]
@@ -45,13 +48,28 @@ pub mod logging;
 pub use crystal::CrystalSystem;
 pub use error::{KhanijError, Result};
 pub use formula::Formula;
+pub use hydrothermal::{
+    AlterationZone, HydrothermalConditions, classify_alteration, estimated_ore_grade,
+    metal_solubility, precipitation_rate,
+};
 pub use mineral::{Luster, Mineral, MohsHardness};
 pub use ore::{
     DepositType, OreDeposit, ResourceCategory, TonnageGradePoint, cutoff_grade,
     is_economically_viable, net_present_value, tonnage_grade_curve,
 };
-pub use rock::{GeologicalProcess, Rock, RockType, rock_cycle_next};
+pub use rock::{
+    GeologicalProcess, Rock, RockType, bulk_density, bulk_density_from_minerals,
+    porosity_from_density, rock_cycle_next,
+};
+pub use sediment::{
+    BudgetResult, SedimentSink, SedimentSource, compute_budget, denudation_rate,
+    sediment_delivery_ratio, sediment_production, transport_capacity,
+};
 pub use soil::{SoilComposition, SoilTexture};
+pub use timescale::{
+    Eon, Epoch, Era, Period, StratigraphicPosition, TimeInterval, classify_age, eon_at_age,
+    epoch_at_age, era_at_age, period_at_age,
+};
 pub use weathering::{chemical_weathering_rate, erosion_rate, physical_weathering_rate};
 
 // --- Chemistry re-exports (kimiya) ---
@@ -93,8 +111,10 @@ pub use rock_mechanics::{
     FailureMode, basalt_material, brittle_ductile_transition_depth, classify_failure_mode,
     gneiss_material, granite_material, infinite_slope_safety_factor, limestone_material,
     marble_material, mohr_coulomb_failure, mohr_coulomb_safety_factor, mohr_coulomb_strength,
-    mohr_coulomb_to_drucker_prager, p_wave_velocity, poisson_from_velocities, quartzite_material,
-    s_wave_velocity, sandstone_material, shale_material, vp_vs_ratio,
+    mohr_coulomb_to_drucker_prager, p_wave_at_temperature, p_wave_velocity,
+    poisson_from_velocities, quartzite_material, s_wave_at_temperature, s_wave_velocity,
+    sandstone_material, shale_material, time_to_weathering_failure, velocity_depth_profile,
+    vp_vs_ratio, weathered_material,
 };
 
 // --- Weather re-exports (badal) ---
