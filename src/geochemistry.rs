@@ -444,11 +444,7 @@ pub fn classify_asi(asi: f64) -> AsiClassification {
 /// assert!(fractional_crystallization(100.0, 0.0, 1.0).is_none());
 /// ```
 #[must_use]
-pub fn fractional_crystallization(
-    c0: f64,
-    f_remaining: f64,
-    partition_coeff: f64,
-) -> Option<f64> {
+pub fn fractional_crystallization(c0: f64, f_remaining: f64, partition_coeff: f64) -> Option<f64> {
     if f_remaining <= 0.0 || f_remaining > 1.0 {
         return None;
     }

@@ -9,7 +9,10 @@ fn main() {
     for rock in [&granite, &sandstone, &marble] {
         println!(
             "{:10} | {:?} | density {:.2} g/cm3 | porosity {:.1}%",
-            rock.name, rock.rock_type, rock.density, rock.porosity * 100.0
+            rock.name,
+            rock.rock_type,
+            rock.density,
+            rock.porosity * 100.0
         );
     }
 
@@ -32,9 +35,15 @@ fn main() {
     // --- Cross-Transitions ---
     println!("\n=== Alternative Paths ===");
     let alt = rock_cycle_next(RockType::Igneous, GeologicalProcess::Metamorphism).unwrap();
-    println!("Igneous + direct metamorphism -> {:?} (e.g., granite to gneiss)", alt);
+    println!(
+        "Igneous + direct metamorphism -> {:?} (e.g., granite to gneiss)",
+        alt
+    );
     let alt2 = rock_cycle_next(RockType::Metamorphic, GeologicalProcess::Weathering).unwrap();
-    println!("Metamorphic + weathering -> {:?} (e.g., marble to limestone)", alt2);
+    println!(
+        "Metamorphic + weathering -> {:?} (e.g., marble to limestone)",
+        alt2
+    );
 
     // --- Bulk Density & Porosity ---
     println!("\n=== Density & Porosity Analysis ===");

@@ -1,14 +1,14 @@
 use khanij::{
     AlterationZone, CrystalSystem, DepositType, Eon, Era, EulerPole, GeologicUnit,
-    GeologicalProcess, IsochronPoint, MajorOxides, MillerIndex, Mineral, MohsHardness,
-    OreDeposit, Period, Rock, RockType, SeaLevelCycle, SedimentSink, SedimentSource,
-    SoilComposition, SoilTexture, StrikeDip, UnitCell, Vei, bragg_angle, bulk_density,
-    bulk_density_from_minerals, chemical_weathering_rate, classify_age, classify_alteration,
-    classify_vei, compute_budget, cutoff_grade, d_spacing, denudation_rate, eon_at_age,
-    era_at_age, erosion_rate, eruption_column_height, estimated_ore_grade, net_present_value,
-    ocean_depth_m, ocean_floor_age, period_at_age, physical_weathering_rate, porosity_from_density,
-    precipitation_rate, pyroclastic_flow_runout, rock_cycle_next, sediment_delivery_ratio,
-    sediment_production, tonnage_grade_curve, transport_capacity,
+    GeologicalProcess, IsochronPoint, MajorOxides, MillerIndex, Mineral, MohsHardness, OreDeposit,
+    Period, Rock, RockType, SeaLevelCycle, SedimentSink, SedimentSource, SoilComposition,
+    SoilTexture, StrikeDip, UnitCell, Vei, bragg_angle, bulk_density, bulk_density_from_minerals,
+    chemical_weathering_rate, classify_age, classify_alteration, classify_vei, compute_budget,
+    cutoff_grade, d_spacing, denudation_rate, eon_at_age, era_at_age, erosion_rate,
+    eruption_column_height, estimated_ore_grade, net_present_value, ocean_depth_m, ocean_floor_age,
+    period_at_age, physical_weathering_rate, porosity_from_density, precipitation_rate,
+    pyroclastic_flow_runout, rock_cycle_next, sediment_delivery_ratio, sediment_production,
+    tonnage_grade_curve, transport_capacity,
 };
 
 // ---------------------------------------------------------------------------
@@ -491,7 +491,9 @@ fn serde_roundtrip_all_types() {
 #[test]
 fn test_mineral_to_formula_pipeline() {
     let mineral = Mineral::quartz(); // SiO2
-    let formula = mineral.parsed_formula().expect("quartz formula should parse");
+    let formula = mineral
+        .parsed_formula()
+        .expect("quartz formula should parse");
     let si = formula.count("Si");
     let o = formula.count("O");
     assert_eq!(si, 1, "SiO2 should have 1 Si");
@@ -507,14 +509,20 @@ fn test_crystallography_bragg_workflow() {
 
     // d-spacing for (1,0,0) of a cubic cell = a / sqrt(1) = a
     let d = d_spacing(&cell, &hkl);
-    assert!((d - 5.64).abs() < 1e-6, "d_100 should equal a for cubic cell");
+    assert!(
+        (d - 5.64).abs() < 1e-6,
+        "d_100 should equal a for cubic cell"
+    );
 
     // Bragg angle with Cu K-alpha (1.5406 A)
     let wavelength = 1.5406;
     let theta = bragg_angle(d, wavelength).expect("Bragg angle should exist");
     // sin(theta) = lambda / (2d) = 1.5406 / 11.28 ~ 0.1365
     // theta ~ 7.85 degrees
-    assert!(theta > 5.0 && theta < 15.0, "Bragg angle should be reasonable, got {theta}");
+    assert!(
+        theta > 5.0 && theta < 15.0,
+        "Bragg angle should be reasonable, got {theta}"
+    );
 }
 
 #[test]
@@ -523,10 +531,7 @@ fn test_geologic_timescale_consistency() {
     for age in ages {
         let eon = eon_at_age(age);
         let era = era_at_age(age);
-        assert!(
-            eon.is_some(),
-            "eon_at_age({age}) should return Some"
-        );
+        assert!(eon.is_some(), "eon_at_age({age}) should return Some");
 
         // For Phanerozoic ages, period and era should both exist and be consistent
         if age < 538.8 {

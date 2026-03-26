@@ -10,7 +10,10 @@ fn main() {
     let check = c14_fraction_remaining(age);
     println!("Verification: at {age:.0} yr, fraction remaining = {check:.4}");
     let pos = classify_age(age / 1e6);
-    println!("Epoch: {:?} (well within the Quaternary)", pos.epoch.unwrap());
+    println!(
+        "Epoch: {:?} (well within the Quaternary)",
+        pos.epoch.unwrap()
+    );
 
     // --- U-Pb Zircon Geochronology ---
     println!("\n=== U-Pb Zircon Dating ===");
@@ -20,11 +23,18 @@ fn main() {
     println!("U-238 decay constant: {lambda:.4e} yr^-1");
     println!("U-238 half-life: {:.3} Ga", t_half / 1e9);
     let (range_min, range_max) = u_pb.useful_range();
-    println!("Useful range: {:.0} Ma - {:.0} Ma", range_min / 1e6, range_max / 1e6);
+    println!(
+        "Useful range: {:.0} Ma - {:.0} Ma",
+        range_min / 1e6,
+        range_max / 1e6
+    );
 
     let zircon_ratio = 0.18; // Pb206/U238 measured in zircon
     let zircon_age = u_pb.age(zircon_ratio).unwrap();
-    println!("Zircon Pb206/U238 = {zircon_ratio} -> age = {:.1} Ga", zircon_age / 1e9);
+    println!(
+        "Zircon Pb206/U238 = {zircon_ratio} -> age = {:.1} Ga",
+        zircon_age / 1e9
+    );
 
     let tc = closure_temperature(IsotopeSystem::U238Pb206, "zircon").unwrap();
     println!("Zircon U-Pb closure temperature: {tc:.0} C");
@@ -38,10 +48,22 @@ fn main() {
     let slope = (rb_sr.decay_constant() * target_age).exp() - 1.0;
     let initial_sr = 0.7040;
     let points = vec![
-        IsochronPoint { x: 0.2, y: initial_sr + slope * 0.2 },
-        IsochronPoint { x: 0.8, y: initial_sr + slope * 0.8 },
-        IsochronPoint { x: 2.5, y: initial_sr + slope * 2.5 },
-        IsochronPoint { x: 5.0, y: initial_sr + slope * 5.0 },
+        IsochronPoint {
+            x: 0.2,
+            y: initial_sr + slope * 0.2,
+        },
+        IsochronPoint {
+            x: 0.8,
+            y: initial_sr + slope * 0.8,
+        },
+        IsochronPoint {
+            x: 2.5,
+            y: initial_sr + slope * 2.5,
+        },
+        IsochronPoint {
+            x: 5.0,
+            y: initial_sr + slope * 5.0,
+        },
     ];
     println!("Analysed 4 mineral separates (87Rb/86Sr vs 87Sr/86Sr):");
     for (i, p) in points.iter().enumerate() {

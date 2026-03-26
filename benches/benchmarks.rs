@@ -1,41 +1,97 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use khanij::{
     // Core types
-    CrystalSystem, Formula, GeologicalProcess, Mineral, MohsHardness, Rock, RockType,
-    SoilComposition,
-    // Crystallography
-    UnitCell, bragg_angle, d_spacing,
-    // Dating
-    IsotopeSystem, c14_age, c14_fraction_remaining, decay_constant, half_life, parent_remaining,
-    // Geochemistry
-    MajorOxides, alumina_saturation_index, classify_asi, classify_tas, fractional_crystallization,
-    mg_number,
-    // Glaciology
-    basal_sliding_velocity, equilibrium_line_altitude, glen_flow_law,
-    ice_velocity_depth_integrated, isostatic_depression, isostatic_rebound_time, mass_balance,
-    // Hydrothermal
-    classify_alteration, estimated_ore_grade, metal_solubility, precipitation_rate,
-    // Ore
-    cutoff_grade, is_economically_viable, net_present_value, tonnage_grade_curve,
-    // Rock
-    bulk_density, bulk_density_from_minerals, porosity_from_density, rock_cycle_next,
-    // Sediment
-    SedimentSink, SedimentSource, compute_budget, denudation_rate, sediment_delivery_ratio,
-    sediment_production, transport_capacity,
-    // Stratigraphy
-    SeaLevelCycle, accommodation_space, sediment_supply_ratio,
+    CrystalSystem,
     // Tectonics
-    EulerPole, SubductionZone, classify_ridge, full_spreading_rate, lithosphere_thickness,
-    ocean_depth_m, ocean_floor_age,
-    // Texture
-    classify_grain_size, classify_sorting, mm_to_phi, phi_to_mm,
-    // Timescale
-    classify_age, eon_at_age, epoch_at_age, era_at_age, period_at_age,
-    // Volcanic
-    classify_magma, classify_vei, eruption_column_height, lava_flow_velocity, magma_viscosity,
-    pyroclastic_flow_runout,
+    EulerPole,
+    Formula,
+    GeologicalProcess,
+    // Dating
+    IsotopeSystem,
+    // Geochemistry
+    MajorOxides,
+    Mineral,
+    MohsHardness,
+    Rock,
+    RockType,
+    // Stratigraphy
+    SeaLevelCycle,
+    // Sediment
+    SedimentSink,
+    SedimentSource,
+    SoilComposition,
+    SubductionZone,
+    // Crystallography
+    UnitCell,
+    accommodation_space,
+    alumina_saturation_index,
+    // Glaciology
+    basal_sliding_velocity,
+    bragg_angle,
+    // Rock
+    bulk_density,
+    bulk_density_from_minerals,
+    c14_age,
+    c14_fraction_remaining,
     // Weathering
-    chemical_weathering_rate, erosion_rate, physical_weathering_rate,
+    chemical_weathering_rate,
+    // Timescale
+    classify_age,
+    // Hydrothermal
+    classify_alteration,
+    classify_asi,
+    // Texture
+    classify_grain_size,
+    // Volcanic
+    classify_magma,
+    classify_ridge,
+    classify_sorting,
+    classify_tas,
+    classify_vei,
+    compute_budget,
+    // Ore
+    cutoff_grade,
+    d_spacing,
+    decay_constant,
+    denudation_rate,
+    eon_at_age,
+    epoch_at_age,
+    equilibrium_line_altitude,
+    era_at_age,
+    erosion_rate,
+    eruption_column_height,
+    estimated_ore_grade,
+    fractional_crystallization,
+    full_spreading_rate,
+    glen_flow_law,
+    half_life,
+    ice_velocity_depth_integrated,
+    is_economically_viable,
+    isostatic_depression,
+    isostatic_rebound_time,
+    lava_flow_velocity,
+    lithosphere_thickness,
+    magma_viscosity,
+    mass_balance,
+    metal_solubility,
+    mg_number,
+    mm_to_phi,
+    net_present_value,
+    ocean_depth_m,
+    ocean_floor_age,
+    parent_remaining,
+    period_at_age,
+    phi_to_mm,
+    physical_weathering_rate,
+    porosity_from_density,
+    precipitation_rate,
+    pyroclastic_flow_runout,
+    rock_cycle_next,
+    sediment_delivery_ratio,
+    sediment_production,
+    sediment_supply_ratio,
+    tonnage_grade_curve,
+    transport_capacity,
 };
 
 // ---------------------------------------------------------------------------
@@ -86,9 +142,7 @@ fn bench_rock(c: &mut Criterion) {
     c.bench_function("rock_new_validated", |b| {
         b.iter(|| Rock::new("Test", RockType::Igneous, 2.7, 0.05, vec!["Quartz".into()]))
     });
-    c.bench_function("bulk_density", |b| {
-        b.iter(|| bulk_density(2.65, 0.15, 1.0))
-    });
+    c.bench_function("bulk_density", |b| b.iter(|| bulk_density(2.65, 0.15, 1.0)));
     let minerals = [(2.65_f64, 0.30_f64), (2.56, 0.60), (2.82, 0.10)];
     c.bench_function("bulk_density_from_minerals", |b| {
         b.iter(|| bulk_density_from_minerals(&minerals, 0.01, 0.001))
@@ -478,9 +532,7 @@ fn bench_rock_mechanics(c: &mut Criterion) {
         b.iter(|| mohr_coulomb_to_drucker_prager(std::f64::consts::FRAC_PI_6, 10e6))
     });
     c.bench_function("brittle_ductile_transition_depth", |b| {
-        b.iter(|| {
-            brittle_ductile_transition_depth(&mat, 10e6, std::f64::consts::FRAC_PI_6, 9.81)
-        })
+        b.iter(|| brittle_ductile_transition_depth(&mat, 10e6, std::f64::consts::FRAC_PI_6, 9.81))
     });
 }
 
@@ -490,34 +542,19 @@ fn bench_stability(c: &mut Criterion) {
         equilibrium_temperature, gibbs_formation, is_reaction_spontaneous, reaction_gibbs,
         stable_polymorph,
     };
-    c.bench_function("gibbs_formation", |b| {
-        b.iter(|| gibbs_formation("SiO2(s)"))
-    });
+    c.bench_function("gibbs_formation", |b| b.iter(|| gibbs_formation("SiO2(s)")));
     c.bench_function("stable_polymorph", |b| {
         b.iter(|| stable_polymorph("SiO2(s)", "CaCO3(s)", 800.0))
     });
     c.bench_function("reaction_gibbs", |b| {
-        b.iter(|| {
-            reaction_gibbs(
-                &[("Fe2O3(s)", 1.0)],
-                &[("Fe(s)", 2.0), ("O2(g)", 1.5)],
-            )
-        })
+        b.iter(|| reaction_gibbs(&[("Fe2O3(s)", 1.0)], &[("Fe(s)", 2.0), ("O2(g)", 1.5)]))
     });
     c.bench_function("is_reaction_spontaneous", |b| {
-        b.iter(|| {
-            is_reaction_spontaneous(
-                &[("Fe2O3(s)", 1.0)],
-                &[("Fe(s)", 2.0), ("O2(g)", 1.5)],
-            )
-        })
+        b.iter(|| is_reaction_spontaneous(&[("Fe2O3(s)", 1.0)], &[("Fe(s)", 2.0), ("O2(g)", 1.5)]))
     });
     c.bench_function("equilibrium_temperature", |b| {
         b.iter(|| {
-            equilibrium_temperature(
-                &[("CaO(s)", 1.0), ("CO2(g)", 1.0)],
-                &[("CaCO3(s)", 1.0)],
-            )
+            equilibrium_temperature(&[("CaO(s)", 1.0), ("CO2(g)", 1.0)], &[("CaCO3(s)", 1.0)])
         })
     });
 }

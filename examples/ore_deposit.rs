@@ -6,7 +6,11 @@ fn main() {
     let deposit = OreDeposit::new("Gold", DepositType::Vein, 0.008, 150.0, 500_000.0).unwrap();
     println!("Mineral:      {}", deposit.mineral);
     println!("Type:         {:?}", deposit.deposit_type);
-    println!("Grade:        {:.2}% ({:.1} g/t)", deposit.grade * 100.0, deposit.grade * 1e6);
+    println!(
+        "Grade:        {:.2}% ({:.1} g/t)",
+        deposit.grade * 100.0,
+        deposit.grade * 1e6
+    );
     println!("Tonnage:      {:.0} t", deposit.tonnage);
     println!("Depth:        {:.0} m", deposit.depth_m);
     println!("Contained Au: {:.1} t", deposit.contained_metal());
@@ -16,9 +20,14 @@ fn main() {
     println!("\n=== Economic Viability ===");
     let gold_price = 60_000_000.0; // $/tonne of pure gold
     let extraction_cost = 150_000_000.0;
-    let viable = is_economically_viable(deposit.grade, deposit.tonnage, gold_price, extraction_cost);
+    let viable =
+        is_economically_viable(deposit.grade, deposit.tonnage, gold_price, extraction_cost);
     let revenue = deposit.gross_revenue(gold_price);
-    println!("Gold price:       ${:.0}/oz (${:.0}M/t)", gold_price / 32150.0, gold_price / 1e6);
+    println!(
+        "Gold price:       ${:.0}/oz (${:.0}M/t)",
+        gold_price / 32150.0,
+        gold_price / 1e6
+    );
     println!("Gross revenue:    ${:.1}M", revenue / 1e6);
     println!("Extraction cost:  ${:.1}M", extraction_cost / 1e6);
     println!("Viable:           {}", if viable { "YES" } else { "NO" });
@@ -49,15 +58,21 @@ fn main() {
     // --- Tonnage-Grade Curve ---
     println!("\n=== Tonnage-Grade Curve ===");
     let blocks = vec![
-        (150_000.0, 0.004), (120_000.0, 0.007), (100_000.0, 0.010),
-        (80_000.0, 0.015),  (30_000.0, 0.025),  (20_000.0, 0.040),
+        (150_000.0, 0.004),
+        (120_000.0, 0.007),
+        (100_000.0, 0.010),
+        (80_000.0, 0.015),
+        (30_000.0, 0.025),
+        (20_000.0, 0.040),
     ];
     let curve = tonnage_grade_curve(&blocks, 5);
     println!("{:>10}  {:>12}  {:>10}", "Cutoff", "Tonnage", "Avg Grade");
     for pt in &curve {
         println!(
             "{:>9.4}%  {:>10.0} t  {:>9.4}%",
-            pt.cutoff_grade * 100.0, pt.tonnage_above_cutoff, pt.average_grade_above_cutoff * 100.0
+            pt.cutoff_grade * 100.0,
+            pt.tonnage_above_cutoff,
+            pt.average_grade_above_cutoff * 100.0
         );
     }
 
@@ -67,7 +82,11 @@ fn main() {
     for t in temps {
         let zone = classify_alteration(t);
         let grade = estimated_ore_grade(1e-6, t, 300.0, 0.1, 0.001);
-        println!("  {t:5.0} C -> {:?}, estimated grade {:.4}%", zone, grade * 100.0);
+        println!(
+            "  {t:5.0} C -> {:?}, estimated grade {:.4}%",
+            zone,
+            grade * 100.0
+        );
     }
     println!("\nGold precipitates near 300 C in the argillic-phyllic transition zone.");
 }

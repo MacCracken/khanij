@@ -133,8 +133,7 @@ impl MohsHardness {
         if hv <= 0.0 {
             return None;
         }
-        let mohs = num::bisection(|m| Self(m).to_vickers() - hv, 1.0, 10.0, 1e-4, 50)
-            .ok()?;
+        let mohs = num::bisection(|m| Self(m).to_vickers() - hv, 1.0, 10.0, 1e-4, 50).ok()?;
         Self::new(mohs)
     }
 }
