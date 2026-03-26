@@ -99,6 +99,362 @@ impl SoilComposition {
     }
 }
 
+// ---------------------------------------------------------------------------
+// USDA Soil Taxonomy — Orders
+// ---------------------------------------------------------------------------
+
+/// USDA Soil Taxonomy order — the 12 top-level soil classifications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum SoilOrder {
+    /// Soils with subsurface clay accumulation and moderate-high base saturation.
+    Alfisol,
+    /// Soils formed in volcanic ash with high water-holding capacity.
+    Andisol,
+    /// Dry soils of arid regions with accumulations of salts or carbonates.
+    Aridisol,
+    /// Young soils with little profile development (recently deposited).
+    Entisol,
+    /// Soils with permafrost within 2m of the surface.
+    Gelisol,
+    /// Organic soils (peat/muck) with >20% organic matter.
+    Histosol,
+    /// Young soils with beginning horizon development.
+    Inceptisol,
+    /// Dark, fertile prairie/grassland soils with thick organic-rich A horizon.
+    Mollisol,
+    /// Highly weathered tropical soils dominated by iron/aluminium oxides.
+    Oxisol,
+    /// Acidic forest soils with a subsurface accumulation of humus and Al/Fe.
+    Spodosol,
+    /// Highly weathered soils with low base saturation and clay accumulation.
+    Ultisol,
+    /// Clay-rich soils that shrink and swell with moisture changes.
+    Vertisol,
+}
+
+impl SoilOrder {
+    /// All 12 soil orders.
+    pub const ALL: &'static [SoilOrder] = &[
+        Self::Alfisol,
+        Self::Andisol,
+        Self::Aridisol,
+        Self::Entisol,
+        Self::Gelisol,
+        Self::Histosol,
+        Self::Inceptisol,
+        Self::Mollisol,
+        Self::Oxisol,
+        Self::Spodosol,
+        Self::Ultisol,
+        Self::Vertisol,
+    ];
+
+    /// Typical climate/environment for this soil order.
+    #[must_use]
+    pub fn typical_environment(&self) -> &'static str {
+        match self {
+            Self::Alfisol => "temperate deciduous forest",
+            Self::Andisol => "volcanic regions",
+            Self::Aridisol => "arid/semi-arid deserts",
+            Self::Entisol => "recent deposits (floodplains, dunes)",
+            Self::Gelisol => "permafrost regions (tundra)",
+            Self::Histosol => "wetlands (bogs, marshes)",
+            Self::Inceptisol => "young landscapes (mountains, river terraces)",
+            Self::Mollisol => "grasslands/prairies",
+            Self::Oxisol => "tropical rainforest",
+            Self::Spodosol => "coniferous forest (boreal/cool humid)",
+            Self::Ultisol => "subtropical humid forest",
+            Self::Vertisol => "seasonal wet-dry climates",
+        }
+    }
+
+    /// Typical fertility level.
+    #[must_use]
+    pub fn fertility(&self) -> SoilFertility {
+        match self {
+            Self::Mollisol | Self::Alfisol | Self::Andisol => SoilFertility::High,
+            Self::Vertisol | Self::Inceptisol | Self::Entisol => SoilFertility::Moderate,
+            Self::Histosol | Self::Aridisol | Self::Gelisol => SoilFertility::Low,
+            Self::Ultisol | Self::Spodosol | Self::Oxisol => SoilFertility::VeryLow,
+        }
+    }
+}
+
+/// Soil fertility classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum SoilFertility {
+    VeryLow,
+    Low,
+    Moderate,
+    High,
+}
+
+// ---------------------------------------------------------------------------
+// Soil Horizons
+// ---------------------------------------------------------------------------
+
+/// Master soil horizon designation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum HorizonType {
+    /// Organic layer (decomposing plant material on surface).
+    O,
+    /// Topsoil — mineral horizon with organic matter accumulation.
+    A,
+    /// Eluviation zone — leached of clay, iron, and organic matter.
+    E,
+    /// Subsoil — zone of accumulation (illuviation) of clay, iron, carbonates.
+    B,
+    /// Parent material — partially weathered rock.
+    C,
+    /// Bedrock — unweathered rock.
+    R,
+}
+
+/// A single soil horizon with properties.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SoilHorizon {
+    /// Horizon type (O, A, E, B, C, R).
+    pub horizon_type: HorizonType,
+    /// Depth to top of horizon in cm.
+    pub depth_top_cm: f32,
+    /// Depth to bottom of horizon in cm.
+    pub depth_bottom_cm: f32,
+    /// Organic matter content as fraction (0.0-1.0).
+    pub organic_matter: f32,
+    /// pH value (0-14).
+    pub ph: f32,
+    /// Texture of this horizon.
+    pub texture: SoilTexture,
+    /// Color (Munsell notation or description).
+    pub color: String,
+}
+
+impl SoilHorizon {
+    /// Thickness of this horizon in cm.
+    #[must_use]
+    pub fn thickness_cm(&self) -> f32 {
+        self.depth_bottom_cm - self.depth_top_cm
+    }
+}
+
+/// A complete soil profile — a vertical sequence of horizons.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SoilProfile {
+    pub horizons: Vec<SoilHorizon>,
+    pub location: String,
+}
+
+impl SoilProfile {
+    /// Total depth of the profile in cm.
+    #[must_use]
+    pub fn total_depth_cm(&self) -> f32 {
+        self.horizons
+            .iter()
+            .map(|h| h.depth_bottom_cm)
+            .fold(0.0_f32, f32::max)
+    }
+
+    /// Check if the profile has a specific horizon type.
+    #[must_use]
+    pub fn has_horizon(&self, ht: HorizonType) -> bool {
+        self.horizons.iter().any(|h| h.horizon_type == ht)
+    }
+
+    /// Get the A horizon (topsoil) if present.
+    #[must_use]
+    pub fn a_horizon(&self) -> Option<&SoilHorizon> {
+        self.horizons
+            .iter()
+            .find(|h| h.horizon_type == HorizonType::A)
+    }
+
+    /// Get the B horizon (subsoil) if present.
+    #[must_use]
+    pub fn b_horizon(&self) -> Option<&SoilHorizon> {
+        self.horizons
+            .iter()
+            .find(|h| h.horizon_type == HorizonType::B)
+    }
+
+    /// Average organic matter content of the A horizon.
+    #[must_use]
+    pub fn topsoil_organic_matter(&self) -> Option<f32> {
+        self.a_horizon().map(|h| h.organic_matter)
+    }
+
+    /// Simplified soil order classification from profile properties.
+    ///
+    /// This is a simplified key — real taxonomy uses many more diagnostic criteria.
+    #[must_use]
+    pub fn classify_order(&self) -> SoilOrder {
+        let a = self.a_horizon();
+        let b = self.b_horizon();
+
+        // Histosol: very high organic matter
+        if a.is_some_and(|h| h.organic_matter > 0.20) {
+            return SoilOrder::Histosol;
+        }
+
+        // Vertisol: very high clay content
+        if a.is_some_and(|h| h.texture == SoilTexture::Clay)
+            && b.is_some_and(|h| h.texture == SoilTexture::Clay)
+        {
+            return SoilOrder::Vertisol;
+        }
+
+        // Mollisol: thick, dark, organic-rich A horizon
+        if a.is_some_and(|h| h.organic_matter > 0.03 && h.thickness_cm() > 25.0 && h.ph > 5.5) {
+            return SoilOrder::Mollisol;
+        }
+
+        // Spodosol: E horizon above B with acidic pH
+        if self.has_horizon(HorizonType::E) && a.is_some_and(|h| h.ph < 5.0) {
+            return SoilOrder::Spodosol;
+        }
+
+        // Oxisol: very thick, clay-rich B, low pH
+        if b.is_some_and(|h| h.thickness_cm() > 100.0 && h.ph < 5.5) {
+            return SoilOrder::Oxisol;
+        }
+
+        // Aridisol: very low organic matter, high pH
+        if a.is_some_and(|h| h.organic_matter < 0.01 && h.ph > 7.5) {
+            return SoilOrder::Aridisol;
+        }
+
+        // Ultisol: clay-rich B, acidic
+        if b.is_some_and(|h| {
+            matches!(
+                h.texture,
+                SoilTexture::Clay | SoilTexture::SandyClay | SoilTexture::SiltyClay
+            ) && h.ph < 5.5
+        }) {
+            return SoilOrder::Ultisol;
+        }
+
+        // Alfisol: clay-rich B, moderate-high pH
+        if b.is_some_and(|h| {
+            matches!(
+                h.texture,
+                SoilTexture::Clay
+                    | SoilTexture::ClayLoam
+                    | SoilTexture::SandyClayLoam
+                    | SoilTexture::SiltyClayLoam
+            ) && h.ph >= 5.5
+        }) {
+            return SoilOrder::Alfisol;
+        }
+
+        // Entisol: no B horizon at all
+        if !self.has_horizon(HorizonType::B) {
+            return SoilOrder::Entisol;
+        }
+
+        // Inceptisol: weak B horizon development (default for young soils)
+        SoilOrder::Inceptisol
+    }
+}
+
+/// Soil pH classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum SoilPhClass {
+    UltraAcid,
+    ExtremelyAcid,
+    VeryStronglyAcid,
+    StronglyAcid,
+    ModeratelyAcid,
+    SlightlyAcid,
+    Neutral,
+    SlightlyAlkaline,
+    ModeratelyAlkaline,
+    StronglyAlkaline,
+    VeryStronglyAlkaline,
+}
+
+/// Classify soil pH into USDA categories.
+#[must_use]
+pub fn classify_ph(ph: f32) -> SoilPhClass {
+    if ph < 3.5 {
+        SoilPhClass::UltraAcid
+    } else if ph < 4.5 {
+        SoilPhClass::ExtremelyAcid
+    } else if ph < 5.0 {
+        SoilPhClass::VeryStronglyAcid
+    } else if ph < 5.5 {
+        SoilPhClass::StronglyAcid
+    } else if ph < 6.0 {
+        SoilPhClass::ModeratelyAcid
+    } else if ph < 6.5 {
+        SoilPhClass::SlightlyAcid
+    } else if ph < 7.3 {
+        SoilPhClass::Neutral
+    } else if ph < 7.8 {
+        SoilPhClass::SlightlyAlkaline
+    } else if ph < 8.4 {
+        SoilPhClass::ModeratelyAlkaline
+    } else if ph < 9.0 {
+        SoilPhClass::StronglyAlkaline
+    } else {
+        SoilPhClass::VeryStronglyAlkaline
+    }
+}
+
+/// Cation exchange capacity estimate from clay content and organic matter.
+///
+/// CEC ≈ 0.5 × clay% + 2.0 × OM%
+///
+/// - `clay_fraction`: clay content as fraction (0.0-1.0)
+/// - `organic_matter_fraction`: OM as fraction (0.0-1.0)
+///
+/// Returns CEC in meq/100g (milliequivalents per 100 grams).
+#[must_use]
+pub fn cation_exchange_capacity(clay_fraction: f32, organic_matter_fraction: f32) -> f32 {
+    0.5 * (clay_fraction * 100.0) + 2.0 * (organic_matter_fraction * 100.0)
+}
+
+/// Soil water holding capacity estimate.
+///
+/// Returns available water capacity in mm/m depth.
+#[must_use]
+pub fn available_water_capacity(texture: SoilTexture) -> f32 {
+    match texture {
+        SoilTexture::Sand => 60.0,
+        SoilTexture::LoamySand => 80.0,
+        SoilTexture::SandyLoam => 120.0,
+        SoilTexture::Loam => 170.0,
+        SoilTexture::SiltLoam => 200.0,
+        SoilTexture::Silt => 180.0,
+        SoilTexture::SandyClayLoam => 140.0,
+        SoilTexture::ClayLoam => 170.0,
+        SoilTexture::SiltyClayLoam => 190.0,
+        SoilTexture::SandyClay => 130.0,
+        SoilTexture::SiltyClay => 160.0,
+        SoilTexture::Clay => 150.0,
+    }
+}
+
+/// Saturated hydraulic conductivity estimate from texture in mm/hr.
+#[must_use]
+pub fn hydraulic_conductivity_mm_hr(texture: SoilTexture) -> f32 {
+    match texture {
+        SoilTexture::Sand => 210.0,
+        SoilTexture::LoamySand => 61.0,
+        SoilTexture::SandyLoam => 26.0,
+        SoilTexture::Loam => 13.0,
+        SoilTexture::SiltLoam => 7.0,
+        SoilTexture::Silt => 7.0,
+        SoilTexture::SandyClayLoam => 4.0,
+        SoilTexture::ClayLoam => 2.0,
+        SoilTexture::SiltyClayLoam => 1.5,
+        SoilTexture::SandyClay => 1.2,
+        SoilTexture::SiltyClay => 0.9,
+        SoilTexture::Clay => 0.6,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,5 +546,171 @@ mod tests {
     fn texture_clay() {
         let s = SoilComposition::new(0.20, 0.30, 0.50).unwrap();
         assert_eq!(s.texture(), SoilTexture::Clay);
+    }
+
+    // --- Soil taxonomy tests ---
+
+    #[test]
+    fn twelve_soil_orders() {
+        assert_eq!(SoilOrder::ALL.len(), 12);
+    }
+
+    #[test]
+    fn mollisol_high_fertility() {
+        assert_eq!(SoilOrder::Mollisol.fertility(), SoilFertility::High);
+    }
+
+    #[test]
+    fn oxisol_very_low_fertility() {
+        assert_eq!(SoilOrder::Oxisol.fertility(), SoilFertility::VeryLow);
+    }
+
+    #[test]
+    fn fertility_ordering() {
+        assert!(SoilFertility::High > SoilFertility::VeryLow);
+        assert!(SoilFertility::Moderate > SoilFertility::Low);
+    }
+
+    fn make_mollisol_profile() -> SoilProfile {
+        SoilProfile {
+            horizons: vec![
+                SoilHorizon {
+                    horizon_type: HorizonType::A,
+                    depth_top_cm: 0.0,
+                    depth_bottom_cm: 40.0,
+                    organic_matter: 0.05,
+                    ph: 6.5,
+                    texture: SoilTexture::Loam,
+                    color: "10YR 2/1".into(),
+                },
+                SoilHorizon {
+                    horizon_type: HorizonType::B,
+                    depth_top_cm: 40.0,
+                    depth_bottom_cm: 100.0,
+                    organic_matter: 0.01,
+                    ph: 6.8,
+                    texture: SoilTexture::ClayLoam,
+                    color: "10YR 4/3".into(),
+                },
+                SoilHorizon {
+                    horizon_type: HorizonType::C,
+                    depth_top_cm: 100.0,
+                    depth_bottom_cm: 150.0,
+                    organic_matter: 0.002,
+                    ph: 7.0,
+                    texture: SoilTexture::SiltLoam,
+                    color: "10YR 5/4".into(),
+                },
+            ],
+            location: "Kansas prairie".into(),
+        }
+    }
+
+    #[test]
+    fn classify_mollisol() {
+        let profile = make_mollisol_profile();
+        assert_eq!(profile.classify_order(), SoilOrder::Mollisol);
+    }
+
+    #[test]
+    fn classify_entisol_no_b_horizon() {
+        let profile = SoilProfile {
+            horizons: vec![SoilHorizon {
+                horizon_type: HorizonType::A,
+                depth_top_cm: 0.0,
+                depth_bottom_cm: 20.0,
+                organic_matter: 0.02,
+                ph: 6.0,
+                texture: SoilTexture::Sand,
+                color: "10YR 5/3".into(),
+            }],
+            location: "River floodplain".into(),
+        };
+        assert_eq!(profile.classify_order(), SoilOrder::Entisol);
+    }
+
+    #[test]
+    fn classify_histosol_high_om() {
+        let profile = SoilProfile {
+            horizons: vec![
+                SoilHorizon {
+                    horizon_type: HorizonType::O,
+                    depth_top_cm: 0.0,
+                    depth_bottom_cm: 10.0,
+                    organic_matter: 0.50,
+                    ph: 4.5,
+                    texture: SoilTexture::Loam,
+                    color: "5YR 2/1".into(),
+                },
+                SoilHorizon {
+                    horizon_type: HorizonType::A,
+                    depth_top_cm: 10.0,
+                    depth_bottom_cm: 50.0,
+                    organic_matter: 0.30,
+                    ph: 4.5,
+                    texture: SoilTexture::SiltLoam,
+                    color: "10YR 2/1".into(),
+                },
+            ],
+            location: "Bog".into(),
+        };
+        assert_eq!(profile.classify_order(), SoilOrder::Histosol);
+    }
+
+    #[test]
+    fn profile_total_depth() {
+        let profile = make_mollisol_profile();
+        assert!((profile.total_depth_cm() - 150.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn horizon_thickness() {
+        let h = SoilHorizon {
+            horizon_type: HorizonType::A,
+            depth_top_cm: 0.0,
+            depth_bottom_cm: 30.0,
+            organic_matter: 0.04,
+            ph: 6.0,
+            texture: SoilTexture::Loam,
+            color: "dark".into(),
+        };
+        assert!((h.thickness_cm() - 30.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn ph_classification() {
+        assert_eq!(classify_ph(4.0), SoilPhClass::ExtremelyAcid);
+        assert_eq!(classify_ph(5.2), SoilPhClass::StronglyAcid);
+        assert_eq!(classify_ph(6.8), SoilPhClass::Neutral);
+        assert_eq!(classify_ph(7.5), SoilPhClass::SlightlyAlkaline);
+        assert_eq!(classify_ph(8.5), SoilPhClass::StronglyAlkaline);
+    }
+
+    #[test]
+    fn cec_increases_with_clay_and_om() {
+        let low = cation_exchange_capacity(0.10, 0.01);
+        let high = cation_exchange_capacity(0.50, 0.05);
+        assert!(high > low);
+    }
+
+    #[test]
+    fn awc_sand_lowest() {
+        let sand_awc = available_water_capacity(SoilTexture::Sand);
+        let loam_awc = available_water_capacity(SoilTexture::Loam);
+        assert!(sand_awc < loam_awc);
+    }
+
+    #[test]
+    fn ksat_sand_highest() {
+        let sand_k = hydraulic_conductivity_mm_hr(SoilTexture::Sand);
+        let clay_k = hydraulic_conductivity_mm_hr(SoilTexture::Clay);
+        assert!(sand_k > clay_k);
+    }
+
+    #[test]
+    fn topsoil_organic_matter_from_profile() {
+        let profile = make_mollisol_profile();
+        let om = profile.topsoil_organic_matter().unwrap();
+        assert!((om - 0.05).abs() < 0.001);
     }
 }

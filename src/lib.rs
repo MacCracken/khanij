@@ -18,15 +18,24 @@
 //!   via [badal](https://crates.io/crates/badal).
 
 pub mod crystal;
+pub mod crystallography;
+pub mod dating;
 pub mod error;
 pub mod formula;
+pub mod geochemistry;
+pub mod glaciology;
+pub mod grid;
 pub mod hydrothermal;
 pub mod mineral;
 pub mod ore;
 pub mod rock;
 pub mod sediment;
 pub mod soil;
+pub mod stratigraphy;
+pub mod tectonics;
+pub mod texture;
 pub mod timescale;
+pub mod volcanic;
 pub mod weathering;
 
 #[cfg(feature = "chemistry")]
@@ -46,8 +55,22 @@ pub mod logging;
 
 // --- Core re-exports (always available) ---
 pub use crystal::CrystalSystem;
+pub use crystallography::{MillerIndex, UnitCell, bragg_angle, bragg_wavelength, d_spacing};
+pub use dating::{
+    IsochronPoint, IsotopeSystem, age_from_ratio, c14_age, c14_fraction_remaining,
+    closure_temperature, decay_constant, half_life, isochron_age, parent_remaining,
+};
 pub use error::{KhanijError, Result};
 pub use formula::Formula;
+pub use geochemistry::{
+    AsiClassification, MajorOxides, TasClassification, alumina_saturation_index, classify_asi,
+    classify_tas, fractional_crystallization, mg_number,
+};
+pub use glaciology::{
+    GlacierType, basal_sliding_velocity, equilibrium_line_altitude, glen_flow_law,
+    ice_velocity_depth_integrated, isostatic_depression, isostatic_rebound_time, mass_balance,
+};
+pub use grid::{GeologicGrid, GeologicLayer, GeologicUnit, StratigraphicColumn, StrikeDip};
 pub use hydrothermal::{
     AlterationZone, HydrothermalConditions, classify_alteration, estimated_ore_grade,
     metal_solubility, precipitation_rate,
@@ -65,10 +88,30 @@ pub use sediment::{
     BudgetResult, SedimentSink, SedimentSource, compute_budget, denudation_rate,
     sediment_delivery_ratio, sediment_production, transport_capacity,
 };
-pub use soil::{SoilComposition, SoilTexture};
+pub use soil::{
+    HorizonType, SoilComposition, SoilFertility, SoilHorizon, SoilOrder, SoilPhClass, SoilProfile,
+    SoilTexture, available_water_capacity, cation_exchange_capacity, classify_ph,
+    hydraulic_conductivity_mm_hr,
+};
+pub use stratigraphy::{
+    DepositionalEnvironment, ParasequenceBoundary, SeaLevelCycle, SystemsTract, WalthersLaw,
+    accommodation_space, sediment_supply_ratio,
+};
+pub use tectonics::{
+    BoundaryType, EulerPole, RidgeType, SubductionZone, classify_ridge, full_spreading_rate,
+    lithosphere_thickness, ocean_depth_m, ocean_floor_age,
+};
+pub use texture::{
+    GrainSize, IgneousTexture, MetamorphicFabric, Roundness, Sorting, classify_grain_size,
+    classify_igneous_texture, classify_sorting, mm_to_phi, phi_to_mm,
+};
 pub use timescale::{
     Eon, Epoch, Era, Period, StratigraphicPosition, TimeInterval, classify_age, eon_at_age,
     epoch_at_age, era_at_age, period_at_age,
+};
+pub use volcanic::{
+    MagmaComposition, MagmaType, Vei, classify_magma, classify_vei, eruption_column_height,
+    lava_flow_velocity, magma_viscosity, pyroclastic_flow_runout,
 };
 pub use weathering::{chemical_weathering_rate, erosion_rate, physical_weathering_rate};
 
