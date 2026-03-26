@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// Soil texture classification (USDA).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
-pub enum SoilTexture { Sand, LoamySand, SandyLoam, Loam, SiltLoam, Silt, SandyClayLoam, ClayLoam, SiltyClayLoam, SandyCite, SiltyClay, Clay }
+pub enum SoilTexture { Sand, LoamySand, SandyLoam, Loam, SiltLoam, Silt, SandyClayLoam, ClayLoam, SiltyClayLoam, SandyClay, SiltyClay, Clay }
 
 /// Soil composition by particle size fractions (sum to 1.0).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

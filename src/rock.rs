@@ -9,6 +9,15 @@ pub enum RockType {
     Metamorphic,  // from heat/pressure transformation
 }
 
+/// Geological process that drives rock cycle transitions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum GeologicalProcess {
+    Weathering,
+    Metamorphism,
+    Melting,
+}
+
 /// A rock with composition and properties.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rock {
@@ -20,6 +29,22 @@ pub struct Rock {
 }
 
 impl Rock {
+    /// Create a new rock with validated density and porosity.
+    /// Returns `None` if density is not positive or porosity is not in `[0.0, 1.0]`.
+    #[must_use]
+    pub fn new(
+        name: impl Into<String>,
+        rock_type: RockType,
+        density: f32,
+        porosity: f32,
+        primary_minerals: Vec<String>,
+    ) -> Option<Self> {
+        if density <= 0.0 || !(0.0..=1.0).contains(&porosity) {
+            return None;
+        }
+        Some(Self { name: name.into(), rock_type, density, porosity, primary_minerals })
+    }
+
     #[must_use] pub fn granite() -> Self {
         Self { name: "Granite".into(), rock_type: RockType::Igneous, density: 2.7, porosity: 0.01, primary_minerals: vec!["Quartz".into(), "Feldspar".into(), "Mica".into()] }
     }
@@ -34,16 +59,16 @@ impl Rock {
     }
 }
 
-/// Rock cycle transition.
+/// Rock cycle transition using a typed geological process.
 #[must_use]
-pub fn rock_cycle_next(rock_type: RockType, process: &str) -> Option<RockType> {
+pub fn rock_cycle_next(rock_type: RockType, process: GeologicalProcess) -> Option<RockType> {
     match (rock_type, process) {
-        (RockType::Igneous, "weathering") => Some(RockType::Sedimentary),
-        (RockType::Sedimentary, "metamorphism") => Some(RockType::Metamorphic),
-        (RockType::Metamorphic, "melting") => Some(RockType::Igneous),
-        (RockType::Igneous, "metamorphism") => Some(RockType::Metamorphic),
-        (RockType::Sedimentary, "melting") => Some(RockType::Igneous),
-        (RockType::Metamorphic, "weathering") => Some(RockType::Sedimentary),
+        (RockType::Igneous, GeologicalProcess::Weathering) => Some(RockType::Sedimentary),
+        (RockType::Sedimentary, GeologicalProcess::Metamorphism) => Some(RockType::Metamorphic),
+        (RockType::Metamorphic, GeologicalProcess::Melting) => Some(RockType::Igneous),
+        (RockType::Igneous, GeologicalProcess::Metamorphism) => Some(RockType::Metamorphic),
+        (RockType::Sedimentary, GeologicalProcess::Melting) => Some(RockType::Igneous),
+        (RockType::Metamorphic, GeologicalProcess::Weathering) => Some(RockType::Sedimentary),
         _ => None,
     }
 }
@@ -55,9 +80,9 @@ mod tests {
     #[test]
     fn rock_cycle_complete() {
         let start = RockType::Igneous;
-        let sed = rock_cycle_next(start, "weathering").unwrap();
-        let meta = rock_cycle_next(sed, "metamorphism").unwrap();
-        let back = rock_cycle_next(meta, "melting").unwrap();
+        let sed = rock_cycle_next(start, GeologicalProcess::Weathering).unwrap();
+        let meta = rock_cycle_next(sed, GeologicalProcess::Metamorphism).unwrap();
+        let back = rock_cycle_next(meta, GeologicalProcess::Melting).unwrap();
         assert_eq!(back, RockType::Igneous);
     }
 
@@ -76,5 +101,27 @@ mod tests {
         for r in [Rock::granite(), Rock::sandstone(), Rock::marble(), Rock::basalt()] {
             assert!((0.0..=1.0).contains(&r.porosity), "{} porosity out of range", r.name);
         }
+    }
+
+    #[test]
+    fn invalid_process_returns_none() {
+        assert!(rock_cycle_next(RockType::Igneous, GeologicalProcess::Melting).is_none());
+    }
+
+    #[test]
+    fn validated_rock_rejects_bad_density() {
+        assert!(Rock::new("Bad", RockType::Igneous, -1.0, 0.5, vec![]).is_none());
+        assert!(Rock::new("Bad", RockType::Igneous, 0.0, 0.5, vec![]).is_none());
+    }
+
+    #[test]
+    fn validated_rock_rejects_bad_porosity() {
+        assert!(Rock::new("Bad", RockType::Igneous, 2.5, -0.1, vec![]).is_none());
+        assert!(Rock::new("Bad", RockType::Igneous, 2.5, 1.1, vec![]).is_none());
+    }
+
+    #[test]
+    fn validated_rock_accepts_valid() {
+        assert!(Rock::new("Good", RockType::Sedimentary, 2.3, 0.15, vec!["Quartz".into()]).is_some());
     }
 }

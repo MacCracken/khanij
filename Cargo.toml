@@ -15,14 +15,20 @@ exclude = [".claude/", ".github/", "docs/", "scripts/"]
 
 [features]
 default = []
+chemistry = ["dep:kimiya"]
+thermodynamics = ["dep:ushma"]
+fluids = ["dep:pravash"]
 logging = ["dep:tracing-subscriber"]
 
 [dependencies]
 hisab = "1"
+kimiya = { version = "1", optional = true }
+pravash = { version = "1", optional = true, features = ["buoyancy", "shallow"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
+ushma = { version = "1", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
