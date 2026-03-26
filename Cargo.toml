@@ -17,12 +17,14 @@ exclude = [".claude/", ".github/", "docs/", "scripts/"]
 default = []
 chemistry = ["dep:kimiya"]
 fluids = ["dep:pravash"]
+mechanics = ["dep:dravya"]
 thermodynamics = ["dep:ushma"]
 weather = ["dep:badal"]
 logging = ["dep:tracing-subscriber"]
 
 [dependencies]
 badal = { path = "../badal", optional = true }
+dravya = { path = "../dravya", optional = true }
 hisab = "1"
 kimiya = { version = "1", optional = true }
 pravash = { version = "1", optional = true, features = ["buoyancy", "shallow"] }

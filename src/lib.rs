@@ -35,6 +35,9 @@ pub mod geothermal;
 #[cfg(feature = "fluids")]
 pub mod hydrology;
 
+#[cfg(feature = "mechanics")]
+pub mod rock_mechanics;
+
 #[cfg(feature = "logging")]
 pub mod logging;
 
@@ -82,6 +85,16 @@ pub use hydrology::{
     is_grain_mobile, radius_of_influence, sediment_drag_force, shields_parameter,
     stokes_settling_velocity, surface_water_config, terminal_velocity, theis_drawdown,
     transport_regime, water_particle, well_function,
+};
+
+// --- Mechanics re-exports (dravya) ---
+#[cfg(feature = "mechanics")]
+pub use rock_mechanics::{
+    FailureMode, basalt_material, brittle_ductile_transition_depth, classify_failure_mode,
+    gneiss_material, granite_material, infinite_slope_safety_factor, limestone_material,
+    marble_material, mohr_coulomb_failure, mohr_coulomb_safety_factor, mohr_coulomb_strength,
+    mohr_coulomb_to_drucker_prager, p_wave_velocity, poisson_from_velocities, quartzite_material,
+    s_wave_velocity, sandstone_material, shale_material, vp_vs_ratio,
 };
 
 // --- Weather re-exports (badal) ---
