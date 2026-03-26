@@ -37,9 +37,9 @@ pub enum SoilTexture {
 /// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SoilComposition {
-    pub sand: f32, // > 0.05mm
-    pub silt: f32, // 0.002-0.05mm
-    pub clay: f32, // < 0.002mm
+    pub sand: f64, // > 0.05mm
+    pub silt: f64, // 0.002-0.05mm
+    pub clay: f64, // < 0.002mm
 }
 
 impl SoilComposition {
@@ -51,7 +51,7 @@ impl SoilComposition {
     /// assert!(SoilComposition::new(0.5, 0.5, 0.5).is_none()); // sum != 1
     /// ```
     #[must_use]
-    pub fn new(sand: f32, silt: f32, clay: f32) -> Option<Self> {
+    pub fn new(sand: f64, silt: f64, clay: f64) -> Option<Self> {
         let sum = sand + silt + clay;
         if (sum - 1.0).abs() > 0.01 || sand < 0.0 || silt < 0.0 || clay < 0.0 {
             return None;
@@ -303,13 +303,13 @@ pub struct SoilHorizon {
     /// Horizon type (O, A, E, B, C, R).
     pub horizon_type: HorizonType,
     /// Depth to top of horizon in cm.
-    pub depth_top_cm: f32,
+    pub depth_top_cm: f64,
     /// Depth to bottom of horizon in cm.
-    pub depth_bottom_cm: f32,
+    pub depth_bottom_cm: f64,
     /// Organic matter content as fraction (0.0-1.0).
-    pub organic_matter: f32,
+    pub organic_matter: f64,
     /// pH value (0-14).
-    pub ph: f32,
+    pub ph: f64,
     /// Texture of this horizon.
     pub texture: SoilTexture,
     /// Color (Munsell notation or description).
@@ -335,7 +335,7 @@ impl SoilHorizon {
     /// assert!((h.thickness_cm() - 50.0).abs() < 0.01);
     /// ```
     #[must_use]
-    pub fn thickness_cm(&self) -> f32 {
+    pub fn thickness_cm(&self) -> f64 {
         self.depth_bottom_cm - self.depth_top_cm
     }
 }
@@ -388,11 +388,11 @@ impl SoilProfile {
     /// assert!((profile.total_depth_cm() - 40.0).abs() < 0.01);
     /// ```
     #[must_use]
-    pub fn total_depth_cm(&self) -> f32 {
+    pub fn total_depth_cm(&self) -> f64 {
         self.horizons
             .iter()
             .map(|h| h.depth_bottom_cm)
-            .fold(0.0_f32, f32::max)
+            .fold(0.0_f64, f64::max)
     }
 
     /// Check if the profile has a specific horizon type.
@@ -497,7 +497,7 @@ impl SoilProfile {
     /// assert!((om - 0.05).abs() < 0.001);
     /// ```
     #[must_use]
-    pub fn topsoil_organic_matter(&self) -> Option<f32> {
+    pub fn topsoil_organic_matter(&self) -> Option<f64> {
         self.a_horizon().map(|h| h.organic_matter)
     }
 
@@ -628,7 +628,7 @@ pub enum SoilPhClass {
 /// assert_eq!(classify_ph(8.5), SoilPhClass::StronglyAlkaline);
 /// ```
 #[must_use]
-pub fn classify_ph(ph: f32) -> SoilPhClass {
+pub fn classify_ph(ph: f64) -> SoilPhClass {
     if ph < 3.5 {
         SoilPhClass::UltraAcid
     } else if ph < 4.5 {
@@ -671,7 +671,7 @@ pub fn classify_ph(ph: f32) -> SoilPhClass {
 /// assert!((cec - 25.0).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn cation_exchange_capacity(clay_fraction: f32, organic_matter_fraction: f32) -> f32 {
+pub fn cation_exchange_capacity(clay_fraction: f64, organic_matter_fraction: f64) -> f64 {
     0.5 * (clay_fraction * 100.0) + 2.0 * (organic_matter_fraction * 100.0)
 }
 
@@ -687,7 +687,7 @@ pub fn cation_exchange_capacity(clay_fraction: f32, organic_matter_fraction: f32
 /// assert!((awc - 170.0).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn available_water_capacity(texture: SoilTexture) -> f32 {
+pub fn available_water_capacity(texture: SoilTexture) -> f64 {
     match texture {
         SoilTexture::Sand => 60.0,
         SoilTexture::LoamySand => 80.0,
@@ -714,7 +714,7 @@ pub fn available_water_capacity(texture: SoilTexture) -> f32 {
 /// assert!((k - 210.0).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn hydraulic_conductivity_mm_hr(texture: SoilTexture) -> f32 {
+pub fn hydraulic_conductivity_mm_hr(texture: SoilTexture) -> f64 {
     match texture {
         SoilTexture::Sand => 210.0,
         SoilTexture::LoamySand => 61.0,

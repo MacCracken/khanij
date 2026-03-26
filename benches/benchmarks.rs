@@ -89,7 +89,7 @@ fn bench_rock(c: &mut Criterion) {
     c.bench_function("bulk_density", |b| {
         b.iter(|| bulk_density(2.65, 0.15, 1.0))
     });
-    let minerals = [(2.65_f32, 0.30_f32), (2.56, 0.60), (2.82, 0.10)];
+    let minerals = [(2.65_f64, 0.30_f64), (2.56, 0.60), (2.82, 0.10)];
     c.bench_function("bulk_density_from_minerals", |b| {
         b.iter(|| bulk_density_from_minerals(&minerals, 0.01, 0.001))
     });

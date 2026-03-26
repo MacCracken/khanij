@@ -428,28 +428,31 @@ pub fn classify_asi(asi: f64) -> AsiClassification {
 ///
 /// Returns the concentration of the element in the remaining liquid.
 ///
-/// # Panics
-///
-/// Panics if `f_remaining` is not in (0, 1].
+/// Returns `None` if `f_remaining` is not in (0, 1].
 ///
 /// # Examples
 ///
 /// ```
 /// # use khanij::*;
 /// // Incompatible element (D < 1) enriches in melt
-/// let c = fractional_crystallization(100.0, 0.5, 0.1);
+/// let c = fractional_crystallization(100.0, 0.5, 0.1).unwrap();
 /// assert!(c > 100.0);
 /// // No crystallization => unchanged
-/// let c2 = fractional_crystallization(42.0, 1.0, 3.0);
+/// let c2 = fractional_crystallization(42.0, 1.0, 3.0).unwrap();
 /// assert!((c2 - 42.0).abs() < 1e-10);
+/// // Invalid f_remaining returns None
+/// assert!(fractional_crystallization(100.0, 0.0, 1.0).is_none());
 /// ```
 #[must_use]
-pub fn fractional_crystallization(c0: f64, f_remaining: f64, partition_coeff: f64) -> f64 {
-    assert!(
-        f_remaining > 0.0 && f_remaining <= 1.0,
-        "f_remaining must be in (0, 1], got {f_remaining}"
-    );
-    c0 * f_remaining.powf(partition_coeff - 1.0)
+pub fn fractional_crystallization(
+    c0: f64,
+    f_remaining: f64,
+    partition_coeff: f64,
+) -> Option<f64> {
+    if f_remaining <= 0.0 || f_remaining > 1.0 {
+        return None;
+    }
+    Some(c0 * f_remaining.powf(partition_coeff - 1.0))
 }
 
 // ---------------------------------------------------------------------------
@@ -603,36 +606,31 @@ mod tests {
 
     #[test]
     fn rayleigh_compatible_element() {
-        // D > 1 => concentration decreases in melt as crystallization proceeds.
-        let c = fractional_crystallization(100.0, 0.5, 2.0);
+        let c = fractional_crystallization(100.0, 0.5, 2.0).unwrap();
         assert!(c < 100.0, "C_l = {c}");
     }
 
     #[test]
     fn rayleigh_incompatible_element() {
-        // D < 1 => concentration increases in remaining melt.
-        let c = fractional_crystallization(100.0, 0.5, 0.1);
+        let c = fractional_crystallization(100.0, 0.5, 0.1).unwrap();
         assert!(c > 100.0, "C_l = {c}");
     }
 
     #[test]
     fn rayleigh_no_crystallization() {
-        // F = 1 => no change
-        let c = fractional_crystallization(42.0, 1.0, 3.0);
+        let c = fractional_crystallization(42.0, 1.0, 3.0).unwrap();
         assert!(approx_eq(c, 42.0, 1e-10));
     }
 
     #[test]
     fn rayleigh_d_equals_one() {
-        // D = 1 => concentration unchanged regardless of F
-        let c = fractional_crystallization(100.0, 0.3, 1.0);
+        let c = fractional_crystallization(100.0, 0.3, 1.0).unwrap();
         assert!(approx_eq(c, 100.0, 1e-10));
     }
 
     #[test]
-    #[should_panic(expected = "f_remaining must be in (0, 1]")]
-    fn rayleigh_zero_f_panics() {
-        let _ = fractional_crystallization(100.0, 0.0, 1.0);
+    fn rayleigh_zero_f_returns_none() {
+        assert!(fractional_crystallization(100.0, 0.0, 1.0).is_none());
     }
 
     // -- Serde round-trip --

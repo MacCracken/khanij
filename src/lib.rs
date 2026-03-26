@@ -85,8 +85,8 @@ pub use rock::{
     porosity_from_density, rock_cycle_next,
 };
 pub use sediment::{
-    BudgetResult, SedimentSink, SedimentSource, compute_budget, denudation_rate,
-    sediment_delivery_ratio, sediment_production, transport_capacity,
+    BudgetResult, GRAIN_CLASSES, GRAIN_DIAMETERS, SedimentSink, SedimentSource, compute_budget,
+    denudation_rate, sediment_delivery_ratio, sediment_production, transport_capacity,
 };
 pub use soil::{
     HorizonType, SoilComposition, SoilFertility, SoilHorizon, SoilOrder, SoilPhClass, SoilProfile,

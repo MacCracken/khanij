@@ -1,11 +1,14 @@
 use khanij::{
-    AlterationZone, CrystalSystem, Eon, Era, GeologicalProcess, Mineral, Period, Rock, RockType,
-    SedimentSink, SedimentSource, SoilComposition, SoilTexture, bulk_density,
+    AlterationZone, CrystalSystem, DepositType, Eon, Era, EulerPole, GeologicUnit,
+    GeologicalProcess, IsochronPoint, MajorOxides, MillerIndex, Mineral, MohsHardness,
+    OreDeposit, Period, Rock, RockType, SeaLevelCycle, SedimentSink, SedimentSource,
+    SoilComposition, SoilTexture, StrikeDip, UnitCell, Vei, bragg_angle, bulk_density,
     bulk_density_from_minerals, chemical_weathering_rate, classify_age, classify_alteration,
-    compute_budget, cutoff_grade, denudation_rate, erosion_rate, estimated_ore_grade,
-    net_present_value, physical_weathering_rate, porosity_from_density, precipitation_rate,
-    rock_cycle_next, sediment_delivery_ratio, sediment_production, tonnage_grade_curve,
-    transport_capacity,
+    classify_vei, compute_budget, cutoff_grade, d_spacing, denudation_rate, eon_at_age,
+    era_at_age, erosion_rate, eruption_column_height, estimated_ore_grade, net_present_value,
+    ocean_depth_m, ocean_floor_age, period_at_age, physical_weathering_rate, porosity_from_density,
+    precipitation_rate, pyroclastic_flow_runout, rock_cycle_next, sediment_delivery_ratio,
+    sediment_production, tonnage_grade_curve, transport_capacity,
 };
 
 // ---------------------------------------------------------------------------
@@ -55,7 +58,7 @@ fn mineral_serde_roundtrip() {
     let restored: Mineral = serde_json::from_str(&json).unwrap();
     assert_eq!(restored.name, original.name);
     assert_eq!(restored.formula, original.formula);
-    assert!((restored.hardness.value() - original.hardness.value()).abs() < f32::EPSILON);
+    assert!((restored.hardness.value() - original.hardness.value()).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -235,7 +238,7 @@ fn geologic_timescale_covers_earth_history() {
 #[test]
 fn rock_density_from_mineral_composition() {
     // Granite: quartz(2.65) 30%, feldspar(2.56) 60%, mica(2.82) 10%, 1% porosity
-    let minerals = [(2.65_f32, 0.3), (2.56, 0.6), (2.82, 0.1)];
+    let minerals = [(2.65_f64, 0.3), (2.56, 0.6), (2.82, 0.1)];
     let bd = bulk_density_from_minerals(&minerals, 0.01, 1.0);
     let granite = Rock::granite();
     // Should be close to granite's stated density
@@ -248,7 +251,7 @@ fn rock_density_from_mineral_composition() {
 
 #[test]
 fn porosity_density_relationship() {
-    let grain = 2.65_f32;
+    let grain = 2.65_f64;
     for phi in [0.0, 0.05, 0.10, 0.20, 0.30] {
         let bd = bulk_density(grain, phi, 0.001);
         let recovered_phi = porosity_from_density(bd, grain);
@@ -344,4 +347,309 @@ fn ore_grade_enhanced_by_fluid_focusing() {
     assert!(enhanced > bg);
     let far = estimated_ore_grade(1e-6, 100.0, 300.0, 0.15, bg);
     assert!(enhanced > far);
+}
+
+// ---------------------------------------------------------------------------
+// Serde roundtrip tests for all major public structs
+// ---------------------------------------------------------------------------
+
+#[test]
+fn serde_roundtrip_all_types() {
+    // Rock::granite()
+    {
+        let orig = Rock::granite();
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: Rock = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.name, orig.name);
+        assert_eq!(back.rock_type, orig.rock_type);
+        assert!((back.density - orig.density).abs() < f64::EPSILON);
+        assert!((back.porosity - orig.porosity).abs() < f64::EPSILON);
+        assert_eq!(back.primary_minerals, orig.primary_minerals);
+    }
+
+    // SoilComposition::new(0.4, 0.4, 0.2)
+    {
+        let orig = SoilComposition::new(0.4, 0.4, 0.2).unwrap();
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: SoilComposition = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.texture(), orig.texture());
+    }
+
+    // MohsHardness::new(7.0)
+    {
+        let orig = MohsHardness::new(7.0).unwrap();
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: MohsHardness = serde_json::from_str(&json).unwrap();
+        assert!((back.value() - orig.value()).abs() < f64::EPSILON);
+    }
+
+    // UnitCell::cubic(5.64)
+    {
+        let orig = UnitCell::cubic(5.64);
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: UnitCell = serde_json::from_str(&json).unwrap();
+        assert!((back.volume() - orig.volume()).abs() < 1e-6);
+    }
+
+    // OreDeposit
+    {
+        let orig = OreDeposit::new("Gold", DepositType::Vein, 0.005, 100.0, 1_000_000.0).unwrap();
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: OreDeposit = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.mineral, orig.mineral);
+        assert_eq!(back.deposit_type, orig.deposit_type);
+        assert!((back.grade - orig.grade).abs() < f64::EPSILON);
+        assert!((back.depth_m - orig.depth_m).abs() < f64::EPSILON);
+        assert!((back.tonnage - orig.tonnage).abs() < f64::EPSILON);
+    }
+
+    // StrikeDip
+    {
+        let orig = StrikeDip {
+            strike_deg: 45.0,
+            dip_deg: 30.0,
+        };
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: StrikeDip = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, orig);
+    }
+
+    // GeologicUnit
+    {
+        let orig = GeologicUnit {
+            name: "Sandstone A".into(),
+            rock_type: "Sedimentary".into(),
+            age_ma: 250.0,
+        };
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: GeologicUnit = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, orig);
+    }
+
+    // EulerPole
+    {
+        let orig = EulerPole {
+            latitude_deg: 62.0,
+            longitude_deg: -41.0,
+            omega_deg_per_myr: 0.95,
+        };
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: EulerPole = serde_json::from_str(&json).unwrap();
+        assert!((back.latitude_deg - orig.latitude_deg).abs() < f64::EPSILON);
+        assert!((back.longitude_deg - orig.longitude_deg).abs() < f64::EPSILON);
+        assert!((back.omega_deg_per_myr - orig.omega_deg_per_myr).abs() < f64::EPSILON);
+    }
+
+    // SeaLevelCycle
+    {
+        let orig = SeaLevelCycle {
+            amplitude_m: 50.0,
+            period_years: 100_000.0,
+        };
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: SeaLevelCycle = serde_json::from_str(&json).unwrap();
+        assert!((back.amplitude_m - orig.amplitude_m).abs() < f64::EPSILON);
+        assert!((back.period_years - orig.period_years).abs() < f64::EPSILON);
+    }
+
+    // MajorOxides (basalt composition)
+    {
+        let orig = MajorOxides {
+            sio2: 49.5,
+            tio2: 1.5,
+            al2o3: 15.5,
+            fe2o3: 2.5,
+            feo: 7.5,
+            mno: 0.17,
+            mgo: 8.0,
+            cao: 11.0,
+            na2o: 2.5,
+            k2o: 0.5,
+            p2o5: 0.2,
+            h2o: 0.5,
+        };
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: MajorOxides = serde_json::from_str(&json).unwrap();
+        assert!((back.sio2 - orig.sio2).abs() < f64::EPSILON);
+        assert!((back.total() - orig.total()).abs() < 1e-10);
+    }
+
+    // IsochronPoint
+    {
+        let orig = IsochronPoint { x: 0.7, y: 0.71 };
+        let json = serde_json::to_string(&orig).unwrap();
+        let back: IsochronPoint = serde_json::from_str(&json).unwrap();
+        assert!((back.x - orig.x).abs() < f64::EPSILON);
+        assert!((back.y - orig.y).abs() < f64::EPSILON);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Cross-module workflow tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_mineral_to_formula_pipeline() {
+    let mineral = Mineral::quartz(); // SiO2
+    let formula = mineral.parsed_formula().expect("quartz formula should parse");
+    let si = formula.count("Si");
+    let o = formula.count("O");
+    assert_eq!(si, 1, "SiO2 should have 1 Si");
+    assert_eq!(o, 2, "SiO2 should have 2 O");
+    assert_eq!(formula.total_atoms(), 3, "SiO2 has 3 total atoms");
+}
+
+#[test]
+fn test_crystallography_bragg_workflow() {
+    // NaCl cubic cell, a = 5.64 A
+    let cell = UnitCell::cubic(5.64);
+    let hkl = MillerIndex { h: 1, k: 0, l: 0 };
+
+    // d-spacing for (1,0,0) of a cubic cell = a / sqrt(1) = a
+    let d = d_spacing(&cell, &hkl);
+    assert!((d - 5.64).abs() < 1e-6, "d_100 should equal a for cubic cell");
+
+    // Bragg angle with Cu K-alpha (1.5406 A)
+    let wavelength = 1.5406;
+    let theta = bragg_angle(d, wavelength).expect("Bragg angle should exist");
+    // sin(theta) = lambda / (2d) = 1.5406 / 11.28 ~ 0.1365
+    // theta ~ 7.85 degrees
+    assert!(theta > 5.0 && theta < 15.0, "Bragg angle should be reasonable, got {theta}");
+}
+
+#[test]
+fn test_geologic_timescale_consistency() {
+    let ages = [0.01, 66.0, 252.0, 541.0, 2500.0, 4000.0];
+    for age in ages {
+        let eon = eon_at_age(age);
+        let era = era_at_age(age);
+        assert!(
+            eon.is_some(),
+            "eon_at_age({age}) should return Some"
+        );
+
+        // For Phanerozoic ages, period and era should both exist and be consistent
+        if age < 538.8 {
+            let period = period_at_age(age);
+            assert!(
+                period.is_some(),
+                "period_at_age({age}) should return Some for Phanerozoic"
+            );
+            assert!(
+                era.is_some(),
+                "era_at_age({age}) should return Some for Phanerozoic"
+            );
+            // Check hierarchy: period's parent era matches era_at_age
+            let p = period.unwrap();
+            let expected_era = era.unwrap();
+            assert_eq!(
+                p.era(),
+                expected_era,
+                "Period {:?} at age {age} Ma should belong to era {:?}, got {:?}",
+                p,
+                expected_era,
+                p.era()
+            );
+        }
+    }
+}
+
+#[test]
+fn test_tectonics_ocean_floor_workflow() {
+    let pole = EulerPole {
+        latitude_deg: 62.0,
+        longitude_deg: -41.0,
+        omega_deg_per_myr: 0.95,
+    };
+    // Compute velocity at 90 degrees from pole (maximum velocity)
+    let v = pole.velocity_mm_yr(90.0);
+    assert!(v > 0.0, "velocity should be positive");
+
+    // Use half the velocity as a half-spreading rate
+    let half_rate = v / 2.0;
+    // Ocean floor age at 500 km from ridge
+    let age = ocean_floor_age(500.0, half_rate);
+    assert!(age > 0.0, "ocean floor age should be positive");
+
+    // Depth at that age
+    let depth = ocean_depth_m(age);
+    assert!(
+        depth > 2500.0,
+        "ocean depth should be greater than ridge crest depth (2500 m), got {depth}"
+    );
+}
+
+#[test]
+fn test_sediment_budget_balances() {
+    let sources = vec![
+        SedimentSource {
+            name: "Hillslope".into(),
+            production_rate: 1000.0,
+            grain_fractions: [0.2, 0.3, 0.3, 0.15, 0.05],
+        },
+        SedimentSource {
+            name: "River bank".into(),
+            production_rate: 500.0,
+            grain_fractions: [0.1, 0.2, 0.4, 0.2, 0.1],
+        },
+    ];
+    let sinks = vec![
+        SedimentSink {
+            name: "Delta".into(),
+            capacity: 800.0,
+            accumulated: 0.0,
+        },
+        SedimentSink {
+            name: "Floodplain".into(),
+            capacity: 400.0,
+            accumulated: 100.0,
+        },
+    ];
+    let budget = compute_budget(&sources, 1500.0, &sinks);
+    // Conservation: total_production = total_deposition + total_export
+    assert!(
+        (budget.total_production - budget.total_deposition - budget.total_export).abs() < 0.01,
+        "sediment budget must balance: production={} deposition={} export={}",
+        budget.total_production,
+        budget.total_deposition,
+        budget.total_export
+    );
+    // total_production should be >= total_deposition + total_export (by definition they equal)
+    assert!(
+        budget.total_production >= budget.total_deposition,
+        "production should be >= deposition"
+    );
+}
+
+#[test]
+fn test_volcanic_eruption_cascade() {
+    // A VEI-5 eruption: ~1e9 m3 ejecta
+    let volume = 1e9;
+    let vei = classify_vei(volume);
+    assert_eq!(vei, Vei::V5, "1e9 m3 should classify as VEI 5");
+
+    // Eruption column height from a mass flux (typical VEI-5 mass flux ~1e7 kg/s)
+    let mass_flux = 1e7;
+    let column_height = eruption_column_height(mass_flux);
+    assert!(
+        column_height > 0.0,
+        "column height should be positive, got {column_height}"
+    );
+    // Typical VEI-5 column heights are ~25 km; our formula gives 0.236 * (1e7)^0.25
+    // = 0.236 * 56.23 = ~13.3 km
+    assert!(
+        column_height > 5.0 && column_height < 50.0,
+        "column height should be in reasonable range (5-50 km), got {column_height}"
+    );
+
+    // Pyroclastic flow runout on a 10-degree slope
+    let runout = pyroclastic_flow_runout(column_height, 10.0);
+    assert!(
+        runout > 0.0,
+        "pyroclastic flow runout should be positive, got {runout}"
+    );
+    assert!(
+        runout > column_height,
+        "runout on a gentle slope should exceed column height"
+    );
 }

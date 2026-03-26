@@ -53,8 +53,8 @@ pub enum ResourceCategory {
 pub struct OreDeposit {
     pub mineral: String,
     pub deposit_type: DepositType,
-    pub grade: f32,   // fraction (0.0-1.0) of target mineral
-    pub depth_m: f32, // positive depth in metres
+    pub grade: f64,   // fraction (0.0-1.0) of target mineral
+    pub depth_m: f64, // positive depth in metres
     pub tonnage: f64, // metric tonnes (positive)
 }
 
@@ -76,8 +76,8 @@ impl OreDeposit {
     pub fn new(
         mineral: impl Into<String>,
         deposit_type: DepositType,
-        grade: f32,
-        depth_m: f32,
+        grade: f64,
+        depth_m: f64,
         tonnage: f64,
     ) -> Option<Self> {
         if !(0.0..=1.0).contains(&grade) || depth_m <= 0.0 || tonnage <= 0.0 {
@@ -103,7 +103,7 @@ impl OreDeposit {
     /// ```
     #[must_use]
     pub fn contained_metal(&self) -> f64 {
-        self.grade as f64 * self.tonnage
+        self.grade * self.tonnage
     }
 
     /// Revenue estimate at a given metal price (contained metal × price).
@@ -135,7 +135,7 @@ impl OreDeposit {
     pub fn stripping_ratio(&self) -> f64 {
         // Simple model: ratio increases linearly with depth
         // Shallow deposits (<50m) are ~2:1, deep (500m+) approach 10:1+
-        (self.depth_m as f64 / 50.0).max(1.0)
+        (self.depth_m / 50.0).max(1.0)
     }
 }
 
@@ -266,12 +266,12 @@ pub fn cutoff_grade(price_per_tonne: f64, cost_per_tonne: f64, recovery: f64) ->
 /// ```
 #[must_use]
 pub fn is_economically_viable(
-    grade: f32,
+    grade: f64,
     tonnage: f64,
     price_per_tonne: f64,
     extraction_cost: f64,
 ) -> bool {
-    let g = grade as f64;
+    let g = grade;
     // Integrate revenue over tonnage with a diminishing-return factor:
     // as you mine more, later tonnes are slightly harder to extract.
     let revenue = calc::integral_simpson(

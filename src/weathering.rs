@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 /// assert!(rate > 0.0 && rate <= 1.0);
 /// ```
 #[must_use]
-pub fn physical_weathering_rate(temp_range_celsius: f32, moisture_fraction: f32) -> f32 {
-    let tr = temp_range_celsius as f64;
-    let mf = moisture_fraction as f64;
+pub fn physical_weathering_rate(temp_range_celsius: f64, moisture_fraction: f64) -> f64 {
+    let tr = temp_range_celsius;
+    let mf = moisture_fraction;
     if tr <= 0.0 || mf <= 0.0 {
         return 0.0;
     }
@@ -24,7 +24,7 @@ pub fn physical_weathering_rate(temp_range_celsius: f32, moisture_fraction: f32)
     let rate = calc::integral_simpson(|t| (t / tr).powi(2) * mf, 0.0, tr, 20).unwrap_or(0.0);
     // Normalise: max rate at temp_range=50, moisture=1 → integral ≈ 50/3 ≈ 16.67
     let normalised = rate / (50.0 / 3.0);
-    (normalised as f32).clamp(0.0, 1.0)
+    normalised.clamp(0.0, 1.0)
 }
 
 /// Rate of chemical weathering. Uses Arrhenius-style exponential temperature
@@ -38,9 +38,9 @@ pub fn physical_weathering_rate(temp_range_celsius: f32, moisture_fraction: f32)
 /// assert!(rate > 0.0 && rate <= 1.0);
 /// ```
 #[must_use]
-pub fn chemical_weathering_rate(mean_temp_celsius: f32, annual_rainfall_mm: f32) -> f32 {
-    let temp = mean_temp_celsius as f64;
-    let rain = annual_rainfall_mm as f64;
+pub fn chemical_weathering_rate(mean_temp_celsius: f64, annual_rainfall_mm: f64) -> f64 {
+    let temp = mean_temp_celsius;
+    let rain = annual_rainfall_mm;
     // Arrhenius-like: rate doubles per ~10°C increase.
     // Integrate the exponential curve from 0 to temp+10 and normalise.
     let temp_factor = calc::integral_simpson(
@@ -53,7 +53,7 @@ pub fn chemical_weathering_rate(mean_temp_celsius: f32, annual_rainfall_mm: f32)
     // Normalise against max (50°C → integral of exp(0.07t) from 0..50 ≈ 47.2)
     let temp_norm = (temp_factor / 47.2).min(1.0);
     let rain_factor = (rain / 2000.0).clamp(0.0, 1.0);
-    (temp_norm * rain_factor) as f32
+    temp_norm * rain_factor
 }
 
 /// Erosion rate estimate (Revised Universal Soil Loss Equation, improved).
@@ -68,14 +68,14 @@ pub fn chemical_weathering_rate(mean_temp_celsius: f32, annual_rainfall_mm: f32)
 /// assert!(covered < bare);
 /// ```
 #[must_use]
-pub fn erosion_rate(rainfall_intensity: f32, slope_degrees: f32, vegetation_cover: f32) -> f32 {
-    let slope_rad = (slope_degrees as f64).to_radians();
+pub fn erosion_rate(rainfall_intensity: f64, slope_degrees: f64, vegetation_cover: f64) -> f64 {
+    let slope_rad = slope_degrees.to_radians();
     // RUSLE slope factor: sin(θ) gives a more realistic nonlinear response than linear θ/45
     let slope_factor = slope_rad.sin().clamp(0.0, 1.0);
     // Cover factor: exponential decay — dense cover is much more effective than sparse
-    let cover = vegetation_cover as f64;
+    let cover = vegetation_cover;
     let cover_factor = calc::lerp(1.0, (-3.0_f64 * cover).exp(), cover);
-    (rainfall_intensity as f64 * slope_factor * cover_factor) as f32
+    rainfall_intensity * slope_factor * cover_factor
 }
 
 #[cfg(test)]
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn flat_ground_no_erosion() {
         let e = erosion_rate(50.0, 0.0, 0.5);
-        assert!(e.abs() < f32::EPSILON);
+        assert!(e.abs() < f64::EPSILON);
     }
 
     #[test]
@@ -368,12 +368,12 @@ mod chemistry_tests {
 /// Requires the `weather` feature.
 #[cfg(feature = "weather")]
 #[must_use]
-pub fn physical_weathering_from_climate(state: &badal::AtmosphericState) -> f32 {
+pub fn physical_weathering_from_climate(state: &badal::AtmosphericState) -> f64 {
     let rh = state.humidity_percent();
     // Estimate diurnal range: drier air → bigger daily swing (arid ~20°C, humid ~5°C)
     let temp_range = 20.0 * (1.0 - rh / 100.0) + 5.0;
-    let moisture = (rh / 100.0) as f32;
-    physical_weathering_rate(temp_range as f32, moisture)
+    let moisture = rh / 100.0;
+    physical_weathering_rate(temp_range, moisture)
 }
 
 /// Chemical weathering rate driven by atmospheric conditions.
@@ -384,12 +384,12 @@ pub fn physical_weathering_from_climate(state: &badal::AtmosphericState) -> f32 
 /// Requires the `weather` feature.
 #[cfg(feature = "weather")]
 #[must_use]
-pub fn chemical_weathering_from_climate(state: &badal::AtmosphericState) -> f32 {
+pub fn chemical_weathering_from_climate(state: &badal::AtmosphericState) -> f64 {
     let temp_c = state.temperature_celsius();
     let rh = state.humidity_percent();
     // Estimate annual rainfall from humidity: tropical humid ~2000mm, arid ~100mm
     let rainfall_mm = (rh / 100.0) * 2500.0;
-    chemical_weathering_rate(temp_c as f32, rainfall_mm as f32)
+    chemical_weathering_rate(temp_c, rainfall_mm)
 }
 
 /// Erosion rate driven by atmospheric conditions.
@@ -405,12 +405,12 @@ pub fn chemical_weathering_from_climate(state: &badal::AtmosphericState) -> f32 
 #[must_use]
 pub fn erosion_from_climate(
     state: &badal::AtmosphericState,
-    slope_degrees: f32,
-    vegetation_cover: f32,
-) -> f32 {
+    slope_degrees: f64,
+    vegetation_cover: f64,
+) -> f64 {
     let rh = state.humidity_percent();
     // Rainfall intensity proxy: higher humidity → more intense rainfall events
-    let rainfall_intensity = (rh / 100.0 * 60.0) as f32; // max ~60 mm/h
+    let rainfall_intensity = rh / 100.0 * 60.0; // max ~60 mm/h
     erosion_rate(rainfall_intensity, slope_degrees, vegetation_cover)
 }
 
@@ -440,7 +440,7 @@ pub fn freeze_thaw_cycles(state: &badal::AtmosphericState) -> f64 {
 /// Requires the `weather` feature.
 #[cfg(feature = "weather")]
 #[must_use]
-pub fn weathering_intensity(state: &badal::AtmosphericState) -> f32 {
+pub fn weathering_intensity(state: &badal::AtmosphericState) -> f64 {
     let physical = physical_weathering_from_climate(state);
     let chemical = chemical_weathering_from_climate(state);
     // Geometric mean gives balanced weight to both mechanisms

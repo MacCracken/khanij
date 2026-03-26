@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 /// ```
 /// # use khanij::*;
 /// let quartz_hardness = MohsHardness::new(7.0).unwrap();
-/// assert!((quartz_hardness.value() - 7.0).abs() < f32::EPSILON);
+/// assert!((quartz_hardness.value() - 7.0).abs() < f64::EPSILON);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct MohsHardness(f32);
+pub struct MohsHardness(f64);
 
 impl MohsHardness {
     /// Create a new `MohsHardness` if the value is within the valid range (1-10).
@@ -28,7 +28,7 @@ impl MohsHardness {
     /// assert!(MohsHardness::new(11.0).is_none());
     /// ```
     #[must_use]
-    pub fn new(value: f32) -> Option<Self> {
+    pub fn new(value: f64) -> Option<Self> {
         if (1.0..=10.0).contains(&value) {
             Some(Self(value))
         } else {
@@ -42,11 +42,11 @@ impl MohsHardness {
     /// ```
     /// # use khanij::*;
     /// let h = MohsHardness::new(5.0).unwrap();
-    /// assert!((h.value() - 5.0).abs() < f32::EPSILON);
+    /// assert!((h.value() - 5.0).abs() < f64::EPSILON);
     /// ```
     #[must_use]
     #[inline]
-    pub fn value(&self) -> f32 {
+    pub fn value(&self) -> f64 {
         self.0
     }
     /// Can this mineral scratch the other?
@@ -83,7 +83,7 @@ impl MohsHardness {
     /// ```
     #[must_use]
     pub fn to_vickers(&self) -> f64 {
-        let m = self.0 as f64;
+        let m = self.0;
         // Cubic fit: HV = 3.24·M³ - 18.2·M² + 90.3·M - 50.0
         // Accurate ±15% for Mohs 1-9, underestimates diamond (which is an outlier).
         // For Mohs >= 9.5, switch to exponential to capture diamond.
@@ -133,9 +133,9 @@ impl MohsHardness {
         if hv <= 0.0 {
             return None;
         }
-        let mohs = num::bisection(|m| Self(m as f32).to_vickers() - hv, 1.0, 10.0, 1e-4, 50)
+        let mohs = num::bisection(|m| Self(m).to_vickers() - hv, 1.0, 10.0, 1e-4, 50)
             .ok()?;
-        Self::new(mohs as f32)
+        Self::new(mohs)
     }
 }
 
@@ -154,7 +154,7 @@ pub struct Mineral {
     pub name: String,
     pub formula: String,
     pub hardness: MohsHardness,
-    pub density: f32, // g/cm³
+    pub density: f64, // g/cm³
     pub crystal_system: super::crystal::CrystalSystem,
     pub luster: Luster,
     pub color: String,
@@ -197,7 +197,7 @@ impl Mineral {
     /// let q = Mineral::quartz();
     /// assert_eq!(q.name, "Quartz");
     /// assert_eq!(q.formula, "SiO₂");
-    /// assert!((q.hardness.value() - 7.0).abs() < f32::EPSILON);
+    /// assert!((q.hardness.value() - 7.0).abs() < f64::EPSILON);
     /// assert_eq!(q.luster, Luster::Vitreous);
     /// ```
     #[must_use]
@@ -489,9 +489,9 @@ mod tests {
 
     #[test]
     fn mineral_presets() {
-        assert!((Mineral::quartz().hardness.value() - 7.0).abs() < f32::EPSILON);
-        assert!((Mineral::diamond().hardness.value() - 10.0).abs() < f32::EPSILON);
-        assert!((Mineral::talc().hardness.value() - 1.0).abs() < f32::EPSILON);
+        assert!((Mineral::quartz().hardness.value() - 7.0).abs() < f64::EPSILON);
+        assert!((Mineral::diamond().hardness.value() - 10.0).abs() < f64::EPSILON);
+        assert!((Mineral::talc().hardness.value() - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]

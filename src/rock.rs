@@ -49,8 +49,8 @@ pub enum GeologicalProcess {
 pub struct Rock {
     pub name: String,
     pub rock_type: RockType,
-    pub density: f32,  // g/cm³
-    pub porosity: f32, // 0.0-1.0
+    pub density: f64,  // g/cm³
+    pub porosity: f64, // 0.0-1.0
     pub primary_minerals: Vec<String>,
 }
 
@@ -79,8 +79,8 @@ impl Rock {
     pub fn new(
         name: impl Into<String>,
         rock_type: RockType,
-        density: f32,
-        porosity: f32,
+        density: f64,
+        porosity: f64,
         primary_minerals: Vec<String>,
     ) -> Option<Self> {
         if density <= 0.0 || !(0.0..=1.0).contains(&porosity) {
@@ -256,7 +256,7 @@ impl Rock {
 /// assert!((bd - 2.4025).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn bulk_density(grain_density: f32, porosity: f32, fluid_density: f32) -> f32 {
+pub fn bulk_density(grain_density: f64, porosity: f64, fluid_density: f64) -> f64 {
     grain_density * (1.0 - porosity) + fluid_density * porosity
 }
 
@@ -280,11 +280,11 @@ pub fn bulk_density(grain_density: f32, porosity: f32, fluid_density: f32) -> f3
 /// ```
 #[must_use]
 pub fn bulk_density_from_minerals(
-    minerals: &[(f32, f32)],
-    porosity: f32,
-    fluid_density: f32,
-) -> f32 {
-    let grain_density: f32 = minerals.iter().map(|(d, f)| d * f).sum();
+    minerals: &[(f64, f64)],
+    porosity: f64,
+    fluid_density: f64,
+) -> f64 {
+    let grain_density: f64 = minerals.iter().map(|(d, f)| d * f).sum();
     bulk_density(grain_density, porosity, fluid_density)
 }
 
@@ -301,7 +301,7 @@ pub fn bulk_density_from_minerals(
 /// assert!((porosity - 0.151).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn porosity_from_density(bulk_density: f32, grain_density: f32) -> f32 {
+pub fn porosity_from_density(bulk_density: f64, grain_density: f64) -> f64 {
     if grain_density <= 0.0 {
         return 0.0;
     }
@@ -431,8 +431,8 @@ mod tests {
 
     #[test]
     fn porosity_from_density_roundtrip() {
-        let grain = 2.65_f32;
-        let phi = 0.15_f32;
+        let grain = 2.65_f64;
+        let phi = 0.15_f64;
         let bd = bulk_density(grain, phi, 0.001); // air-filled
         let recovered = porosity_from_density(bd, grain);
         assert!((recovered - phi).abs() < 0.01);

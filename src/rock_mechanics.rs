@@ -632,7 +632,7 @@ pub fn velocity_depth_profile(
 pub fn weathered_material(material: &Material, weathering_fraction: f64) -> Material {
     let w = weathering_fraction.clamp(0.0, 1.0);
     Material {
-        name: format!("{} (weathered {:.0}%)", material.name, w * 100.0),
+        name: format!("{} (weathered {:.0}%)", material.name, w * 100.0).into(),
         youngs_modulus: material.youngs_modulus * (1.0 - 0.9 * w), // up to 90% reduction
         poisson_ratio: material.poisson_ratio * (1.0 + 0.3 * w),   // slight increase
         yield_strength: material.yield_strength * (1.0 - 0.95 * w), // nearly total loss
