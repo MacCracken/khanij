@@ -8,19 +8,33 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Khanij, please report it responsibly:
+Please report security vulnerabilities through
+[GitHub Security Advisories](https://github.com/MacCracken/khanij/security/advisories/new).
 
-1. **Do not** open a public issue
-2. Email the maintainers at the address listed in the repository
-3. Include a description of the vulnerability and steps to reproduce
-4. Allow reasonable time for a fix before public disclosure
+**Do not** open a public issue for security vulnerabilities.
 
-We aim to acknowledge reports within 48 hours and provide a fix or mitigation
-within 7 days for critical issues.
+Include:
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact assessment
+
+## Response Timeline
+
+| Stage | Target |
+|-------|--------|
+| Acknowledgement | 48 hours |
+| Initial assessment | 5 business days |
+| Critical severity fix | 14 days |
+| High severity fix | 30 days |
+| Moderate/Low severity | Next scheduled release |
 
 ## Scope
 
-Khanij is a scientific computation library. Security concerns primarily involve:
+This policy covers the `khanij` crate and its published API. Vulnerabilities in
+upstream dependencies should be reported to the respective maintainers; we will
+track and update our dependency pins as fixes become available.
+
+Security concerns for this crate primarily involve:
 
 - **Denial of service**: Inputs that cause excessive computation or memory usage
 - **Numerical overflow**: Calculations that produce incorrect results silently
@@ -28,3 +42,8 @@ Khanij is a scientific computation library. Security concerns primarily involve:
 
 We run `cargo audit` and `cargo deny` in CI to catch known dependency
 vulnerabilities.
+
+## Disclosure
+
+We follow coordinated disclosure. Reporters will be credited in the release
+notes unless they prefer to remain anonymous.

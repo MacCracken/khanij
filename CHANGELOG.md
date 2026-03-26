@@ -2,6 +2,55 @@
 
 All notable changes to khanij are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **f32 → f64 standardization** — all numeric types unified to `f64` across
+  `mineral.rs`, `rock.rs`, `soil.rs`, `weathering.rs`, and `ore.rs` for
+  consistent precision. Breaking change from 0.1.0.
+- **`fractional_crystallization()`** now returns `Option<f64>` instead of
+  panicking on invalid `f_remaining`. Breaking change from 0.1.0.
+- **`from_vickers()`** now uses `hisab::num::bisection` instead of hand-rolled
+  binary search.
+- **`well_function()`** now uses `hisab::calc::integral_gauss_legendre` with
+  log-substitution instead of manual series expansion.
+
+### Added
+
+- **291 doc-tests** across all 24 modules (up from 8). Every public function,
+  struct, and enum now has runnable examples.
+- **111 benchmarks** covering all modules including feature-gated ones (up from
+  19 covering 7 modules).
+- **7 new integration tests** — serde roundtrips for 11 types, cross-module
+  workflows (mineral→formula pipeline, crystallography→Bragg, timescale
+  consistency, tectonics ocean floor, sediment budget, volcanic eruption
+  cascade).
+- **3 new examples** — `dating.rs` (radiometric dating workflow),
+  `rock_cycle.rs` (full cycle simulation), `ore_deposit.rs` (economics
+  evaluation).
+- **`GRAIN_CLASSES`** and **`GRAIN_DIAMETERS`** re-exported from `lib.rs`.
+- **README.md** — comprehensive crate documentation with quick-start, feature
+  matrix, and module overview.
+- **CONTRIBUTING.md** — contributor guide with workflow, code style, and module
+  checklist.
+- **SECURITY.md** — security policy with SLA table, GitHub Advisory reporting,
+  and coordinated disclosure.
+- **CODE_OF_CONDUCT.md** — Contributor Covenant 2.1 with enforcement details.
+- **docs/architecture/overview.md** — module map, design principles, data flow,
+  feature independence, dependency inventory.
+- **docs/development/roadmap.md** — scope, completed work, P1/P2/P3 backlog,
+  consumer crates, crate boundaries.
+- **benchmarks.md** — benchmark tracking baseline.
+- CI: bench job, coverage threshold (80%), multi-target release builds.
+
+### Quality
+
+- 693 tests (374 unit + 28 integration + 291 doc-tests), 0 failures
+- 111 criterion benchmarks, all modules covered
+- 0 clippy warnings, 0 doc warnings
+- codecov target: 80% project, 75% patch
+
 ## [0.1.0] — 2026-03-26
 
 Initial release of the khanij geology and mineralogy engine.
