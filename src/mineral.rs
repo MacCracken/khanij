@@ -236,27 +236,30 @@ impl Mineral {
         }
     }
 
-    /// Build a kimiya `Molecule` from this mineral's composition.
+    /// Parse this mineral's formula string into a [`super::formula::Formula`].
+    #[must_use]
+    pub fn parsed_formula(&self) -> Option<super::formula::Formula> {
+        super::formula::Formula::parse(&self.formula)
+    }
+
+    /// Build a kimiya `Molecule` from this mineral's formula string.
+    ///
+    /// Uses the formula parser — works for any mineral, not just presets.
     /// Requires the `chemistry` feature.
     #[cfg(feature = "chemistry")]
     #[must_use]
     pub fn molecule(&self) -> Option<kimiya::Molecule> {
-        match self.name.as_str() {
-            "Quartz" => Some(kimiya::Molecule::new(&[(14, 1), (8, 2)])), // SiO₂
-            "Calcite" => Some(kimiya::Molecule::new(&[(20, 1), (6, 1), (8, 3)])), // CaCO₃
-            "Diamond" => Some(kimiya::Molecule::new(&[(6, 1)])),         // C
-            "Talc" => Some(kimiya::Molecule::new(&[(12, 3), (14, 4), (8, 12), (1, 2)])), // Mg₃Si₄O₁₀(OH)₂
-            "Feldspar" => Some(kimiya::Molecule::new(&[(19, 1), (13, 1), (14, 3), (8, 8)])), // KAlSi₃O₈
-            _ => None,
-        }
+        self.parsed_formula().and_then(|f| f.to_molecule())
     }
 
     /// Molecular weight in g/mol via kimiya.
+    ///
+    /// Uses the formula parser — works for any mineral, not just presets.
     /// Requires the `chemistry` feature.
     #[cfg(feature = "chemistry")]
     #[must_use]
     pub fn molecular_weight(&self) -> Option<f64> {
-        self.molecule().and_then(|m| m.molecular_weight().ok())
+        self.parsed_formula().and_then(|f| f.molecular_weight())
     }
 }
 

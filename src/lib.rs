@@ -14,9 +14,12 @@
 //!   equilibria via [ushma](https://crates.io/crates/ushma).
 //! - **`fluids`** — groundwater flow, sediment transport, and surface hydrology
 //!   via [pravash](https://crates.io/crates/pravash).
+//! - **`weather`** — climate-driven weathering and erosion from atmospheric state
+//!   via [badal](https://crates.io/crates/badal).
 
 pub mod crystal;
 pub mod error;
+pub mod formula;
 pub mod mineral;
 pub mod ore;
 pub mod rock;
@@ -38,6 +41,7 @@ pub mod logging;
 // --- Core re-exports (always available) ---
 pub use crystal::CrystalSystem;
 pub use error::{KhanijError, Result};
+pub use formula::Formula;
 pub use mineral::{Luster, Mineral, MohsHardness};
 pub use ore::{
     DepositType, OreDeposit, ResourceCategory, TonnageGradePoint, cutoff_grade,
@@ -78,4 +82,11 @@ pub use hydrology::{
     is_grain_mobile, radius_of_influence, sediment_drag_force, shields_parameter,
     stokes_settling_velocity, surface_water_config, terminal_velocity, theis_drawdown,
     transport_regime, water_particle, well_function,
+};
+
+// --- Weather re-exports (badal) ---
+#[cfg(feature = "weather")]
+pub use weathering::{
+    chemical_weathering_from_climate, erosion_from_climate, freeze_thaw_cycles,
+    physical_weathering_from_climate, weathering_intensity,
 };

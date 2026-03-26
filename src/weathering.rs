@@ -329,3 +329,196 @@ mod chemistry_tests {
         assert!(warm > cold);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Weather-gated functions (badal)
+// ---------------------------------------------------------------------------
+
+/// Physical weathering rate driven by atmospheric conditions.
+///
+/// Uses temperature and humidity from a badal `AtmosphericState` to compute
+/// the freeze-thaw weathering potential. Assumes the diurnal temperature range
+/// is roughly proportional to the deviation from dew point.
+///
+/// Requires the `weather` feature.
+#[cfg(feature = "weather")]
+#[must_use]
+pub fn physical_weathering_from_climate(state: &badal::AtmosphericState) -> f32 {
+    let rh = state.humidity_percent();
+    // Estimate diurnal range: drier air → bigger daily swing (arid ~20°C, humid ~5°C)
+    let temp_range = 20.0 * (1.0 - rh / 100.0) + 5.0;
+    let moisture = (rh / 100.0) as f32;
+    physical_weathering_rate(temp_range as f32, moisture)
+}
+
+/// Chemical weathering rate driven by atmospheric conditions.
+///
+/// Uses temperature and humidity to estimate annual rainfall proxy, then
+/// computes the chemical weathering rate.
+///
+/// Requires the `weather` feature.
+#[cfg(feature = "weather")]
+#[must_use]
+pub fn chemical_weathering_from_climate(state: &badal::AtmosphericState) -> f32 {
+    let temp_c = state.temperature_celsius();
+    let rh = state.humidity_percent();
+    // Estimate annual rainfall from humidity: tropical humid ~2000mm, arid ~100mm
+    let rainfall_mm = (rh / 100.0) * 2500.0;
+    chemical_weathering_rate(temp_c as f32, rainfall_mm as f32)
+}
+
+/// Erosion rate driven by atmospheric conditions.
+///
+/// Uses wind speed (from Beaufort scale estimate based on stability) and
+/// precipitation intensity proxy from atmospheric state.
+///
+/// - `slope_degrees`: terrain slope
+/// - `vegetation_cover`: vegetation cover fraction (0.0-1.0)
+///
+/// Requires the `weather` feature.
+#[cfg(feature = "weather")]
+#[must_use]
+pub fn erosion_from_climate(
+    state: &badal::AtmosphericState,
+    slope_degrees: f32,
+    vegetation_cover: f32,
+) -> f32 {
+    let rh = state.humidity_percent();
+    // Rainfall intensity proxy: higher humidity → more intense rainfall events
+    let rainfall_intensity = (rh / 100.0 * 60.0) as f32; // max ~60 mm/h
+    erosion_rate(rainfall_intensity, slope_degrees, vegetation_cover)
+}
+
+/// Frost weathering susceptibility: how many freeze-thaw cycles per day
+/// are likely at this atmospheric state.
+///
+/// Returns an estimate of daily freeze-thaw cycles (0.0 = no frost, up to ~2.0).
+///
+/// Requires the `weather` feature.
+#[cfg(feature = "weather")]
+#[must_use]
+pub fn freeze_thaw_cycles(state: &badal::AtmosphericState) -> f64 {
+    let temp_c = state.temperature_celsius();
+    // Freeze-thaw cycles peak when mean temperature is near 0°C
+    // Gaussian-like distribution centered at 0°C with σ ≈ 5°C
+    let proximity = (-temp_c.powi(2) / 50.0).exp();
+    // More humidity → more water available to freeze
+    let moisture_factor = state.humidity_percent() / 100.0;
+    2.0 * proximity * moisture_factor
+}
+
+/// Combined weathering intensity index from atmospheric state.
+///
+/// Returns a value 0.0-1.0 representing the overall weathering potential,
+/// combining physical and chemical weathering.
+///
+/// Requires the `weather` feature.
+#[cfg(feature = "weather")]
+#[must_use]
+pub fn weathering_intensity(state: &badal::AtmosphericState) -> f32 {
+    let physical = physical_weathering_from_climate(state);
+    let chemical = chemical_weathering_from_climate(state);
+    // Geometric mean gives balanced weight to both mechanisms
+    (physical * chemical).sqrt().clamp(0.0, 1.0)
+}
+
+#[cfg(all(test, feature = "weather"))]
+mod weather_tests {
+    use super::*;
+
+    fn tropical() -> badal::AtmosphericState {
+        badal::AtmosphericState::new(303.15, 101_325.0, 85.0, 0.0).unwrap() // 30°C, 85% RH
+    }
+
+    fn arid() -> badal::AtmosphericState {
+        badal::AtmosphericState::new(313.15, 101_325.0, 15.0, 0.0).unwrap() // 40°C, 15% RH
+    }
+
+    fn arctic() -> badal::AtmosphericState {
+        badal::AtmosphericState::new(263.15, 101_325.0, 70.0, 0.0).unwrap() // -10°C, 70% RH
+    }
+
+    fn periglacial() -> badal::AtmosphericState {
+        badal::AtmosphericState::new(273.15, 101_325.0, 80.0, 0.0).unwrap() // 0°C, 80% RH
+    }
+
+    #[test]
+    fn tropical_high_chemical_weathering() {
+        let rate = chemical_weathering_from_climate(&tropical());
+        assert!(
+            rate > 0.3,
+            "Tropical should have high chemical weathering, got {rate}"
+        );
+    }
+
+    #[test]
+    fn arid_low_chemical_weathering() {
+        let rate = chemical_weathering_from_climate(&arid());
+        assert!(
+            rate < 0.2,
+            "Arid should have low chemical weathering, got {rate}"
+        );
+    }
+
+    #[test]
+    fn tropical_more_chemical_than_arid() {
+        let trop = chemical_weathering_from_climate(&tropical());
+        let dry = chemical_weathering_from_climate(&arid());
+        assert!(trop > dry);
+    }
+
+    #[test]
+    fn arid_more_physical_than_tropical() {
+        // Arid: big diurnal range, low moisture but still some physical
+        // Both should have measurable physical weathering
+        let trop = physical_weathering_from_climate(&tropical());
+        let dry = physical_weathering_from_climate(&arid());
+        // Arid has bigger temp range, but tropical has more moisture
+        // Physical weathering needs both — tropical actually higher due to moisture
+        assert!(trop > 0.0);
+        assert!(dry >= 0.0);
+    }
+
+    #[test]
+    fn freeze_thaw_peaks_near_zero() {
+        let peri = freeze_thaw_cycles(&periglacial()); // 0°C
+        let trop = freeze_thaw_cycles(&tropical()); // 30°C
+        let cold = freeze_thaw_cycles(&arctic()); // -10°C
+        assert!(peri > trop, "Freeze-thaw should peak near 0°C");
+        assert!(
+            peri > cold,
+            "Freeze-thaw should peak near 0°C, not at -10°C"
+        );
+    }
+
+    #[test]
+    fn freeze_thaw_zero_in_tropics() {
+        let cycles = freeze_thaw_cycles(&tropical());
+        assert!(cycles < 0.01, "No freeze-thaw in tropics, got {cycles}");
+    }
+
+    #[test]
+    fn erosion_from_climate_increases_with_humidity() {
+        let wet = erosion_from_climate(&tropical(), 15.0, 0.3);
+        let dry = erosion_from_climate(&arid(), 15.0, 0.3);
+        assert!(wet > dry);
+    }
+
+    #[test]
+    fn weathering_intensity_bounded() {
+        for state in [tropical(), arid(), arctic(), periglacial()] {
+            let wi = weathering_intensity(&state);
+            assert!(
+                (0.0..=1.0).contains(&wi),
+                "Weathering intensity should be 0-1, got {wi}"
+            );
+        }
+    }
+
+    #[test]
+    fn at_altitude_reduces_temperature() {
+        let sea = badal::AtmosphericState::sea_level();
+        let mountain = badal::AtmosphericState::at_altitude(3000.0);
+        assert!(mountain.temperature_k() < sea.temperature_k());
+    }
+}

@@ -1,8 +1,8 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use khanij::{
-    GeologicalProcess, Mineral, MohsHardness, Rock, RockType, SoilComposition,
-    chemical_weathering_rate, erosion_rate, is_economically_viable, physical_weathering_rate,
-    rock_cycle_next,
+    Formula, GeologicalProcess, Mineral, MohsHardness, Rock, RockType, SoilComposition,
+    chemical_weathering_rate, cutoff_grade, erosion_rate, is_economically_viable,
+    net_present_value, physical_weathering_rate, rock_cycle_next, tonnage_grade_curve,
 };
 
 fn bench_mineral_presets(c: &mut Criterion) {
@@ -48,6 +48,36 @@ fn bench_ore(c: &mut Criterion) {
     c.bench_function("is_economically_viable", |b| {
         b.iter(|| is_economically_viable(0.05, 1_000_000.0, 5000.0, 100_000_000.0))
     });
+    c.bench_function("cutoff_grade", |b| {
+        b.iter(|| cutoff_grade(60_000_000.0, 50.0, 0.90))
+    });
+    c.bench_function("net_present_value", |b| {
+        b.iter(|| net_present_value(10_000_000.0, 7_000_000.0, 0.08, 10.0))
+    });
+    let blocks: Vec<(f64, f64)> = (0..100)
+        .map(|i| (1000.0, 0.001 + 0.001 * i as f64))
+        .collect();
+    c.bench_function("tonnage_grade_curve_100_blocks", |b| {
+        b.iter(|| tonnage_grade_curve(&blocks, 20))
+    });
+}
+
+fn bench_formula(c: &mut Criterion) {
+    c.bench_function("formula_parse_simple", |b| {
+        b.iter(|| Formula::parse("SiO2"))
+    });
+    c.bench_function("formula_parse_complex", |b| {
+        b.iter(|| Formula::parse("Mg3Si4O10(OH)2"))
+    });
+    c.bench_function("formula_parse_hydrate", |b| {
+        b.iter(|| Formula::parse("CaSO4·2H2O"))
+    });
+    c.bench_function("formula_parse_unicode", |b| {
+        b.iter(|| Formula::parse("Mg₃Si₄O₁₀(OH)₂"))
+    });
+    c.bench_function("formula_parse_solid_solution", |b| {
+        b.iter(|| Formula::parse("(Mg,Fe)2SiO4"))
+    });
 }
 
 criterion_group!(
@@ -58,5 +88,6 @@ criterion_group!(
     bench_soil,
     bench_weathering,
     bench_ore,
+    bench_formula,
 );
 criterion_main!(benches);
