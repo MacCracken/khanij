@@ -1,6 +1,17 @@
 use serde::{Deserialize, Serialize};
 
 /// Crystal system classification (7 systems).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let system = CrystalSystem::Cubic;
+/// assert_eq!(system.symmetry_order(), 48);
+///
+/// let triclinic = CrystalSystem::Triclinic;
+/// assert_eq!(triclinic.symmetry_order(), 2);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum CrystalSystem {
@@ -15,6 +26,15 @@ pub enum CrystalSystem {
 
 impl CrystalSystem {
     /// Number of symmetry elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert_eq!(CrystalSystem::Cubic.symmetry_order(), 48);
+    /// assert_eq!(CrystalSystem::Hexagonal.symmetry_order(), 24);
+    /// assert_eq!(CrystalSystem::Triclinic.symmetry_order(), 2);
+    /// ```
     #[must_use]
     pub fn symmetry_order(&self) -> u8 {
         match self {

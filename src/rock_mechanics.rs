@@ -10,6 +10,14 @@ use dravya::{Material, StressTensor};
 // ---------------------------------------------------------------------------
 
 /// Create a dravya `Material` with typical granite elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = granite_material();
+/// assert!((mat.density - 2700.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn granite_material() -> Material {
     Material {
@@ -24,6 +32,14 @@ pub fn granite_material() -> Material {
 }
 
 /// Create a dravya `Material` with typical basalt elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = basalt_material();
+/// assert!((mat.density - 3000.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn basalt_material() -> Material {
     Material {
@@ -38,6 +54,14 @@ pub fn basalt_material() -> Material {
 }
 
 /// Create a dravya `Material` with typical limestone elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = limestone_material();
+/// assert!((mat.density - 2500.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn limestone_material() -> Material {
     Material {
@@ -52,6 +76,14 @@ pub fn limestone_material() -> Material {
 }
 
 /// Create a dravya `Material` with typical sandstone elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = sandstone_material();
+/// assert!((mat.density - 2300.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn sandstone_material() -> Material {
     Material {
@@ -66,6 +98,14 @@ pub fn sandstone_material() -> Material {
 }
 
 /// Create a dravya `Material` with typical marble elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = marble_material();
+/// assert!((mat.density - 2700.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn marble_material() -> Material {
     Material {
@@ -80,6 +120,14 @@ pub fn marble_material() -> Material {
 }
 
 /// Create a dravya `Material` with typical shale elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = shale_material();
+/// assert!((mat.density - 2400.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn shale_material() -> Material {
     Material {
@@ -94,6 +142,14 @@ pub fn shale_material() -> Material {
 }
 
 /// Create a dravya `Material` with typical quartzite elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = quartzite_material();
+/// assert!((mat.density - 2650.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn quartzite_material() -> Material {
     Material {
@@ -108,6 +164,14 @@ pub fn quartzite_material() -> Material {
 }
 
 /// Create a dravya `Material` with typical gneiss elastic properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = gneiss_material();
+/// assert!((mat.density - 2700.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn gneiss_material() -> Material {
     Material {
@@ -130,6 +194,14 @@ pub fn gneiss_material() -> Material {
 /// Vp = √((K + 4G/3) / ρ)
 ///
 /// Returns velocity in m/s.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let vp = p_wave_velocity(&granite_material());
+/// assert!(vp > 4000.0 && vp < 7000.0);
+/// ```
 #[must_use]
 pub fn p_wave_velocity(material: &Material) -> f64 {
     let k = material.bulk_modulus();
@@ -142,6 +214,14 @@ pub fn p_wave_velocity(material: &Material) -> f64 {
 /// Vs = √(G / ρ)
 ///
 /// Returns velocity in m/s.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let vs = s_wave_velocity(&granite_material());
+/// assert!(vs > 2500.0 && vs < 4000.0);
+/// ```
 #[must_use]
 pub fn s_wave_velocity(material: &Material) -> f64 {
     (material.shear_modulus() / material.density).sqrt()
@@ -152,6 +232,14 @@ pub fn s_wave_velocity(material: &Material) -> f64 {
 /// - Dry rock: ~1.5-1.7
 /// - Saturated rock: ~1.7-2.0
 /// - Unconsolidated sediment: > 2.0
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let ratio = vp_vs_ratio(&granite_material());
+/// assert!(ratio > 1.5 && ratio < 2.5);
+/// ```
 #[must_use]
 pub fn vp_vs_ratio(material: &Material) -> f64 {
     let vp = p_wave_velocity(material);
@@ -162,6 +250,17 @@ pub fn vp_vs_ratio(material: &Material) -> f64 {
 /// Poisson's ratio from Vp/Vs ratio.
 ///
 /// ν = (R² - 2) / (2(R² - 1))  where R = Vp/Vs
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = granite_material();
+/// let vp = p_wave_velocity(&mat);
+/// let vs = s_wave_velocity(&mat);
+/// let nu = poisson_from_velocities(vp, vs).unwrap();
+/// assert!((nu - 0.25).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn poisson_from_velocities(vp: f64, vs: f64) -> Option<f64> {
     if vs <= 0.0 {
@@ -187,6 +286,14 @@ pub fn poisson_from_velocities(vp: f64, vs: f64) -> Option<f64> {
 /// - `normal_stress`: σ_n in Pa (compressive positive)
 ///
 /// Returns shear strength τ in Pa.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let tau = mohr_coulomb_strength(10e6, std::f64::consts::FRAC_PI_6, 50e6);
+/// assert!(tau > 10e6);
+/// ```
 #[must_use]
 pub fn mohr_coulomb_strength(cohesion: f64, friction_angle_rad: f64, normal_stress: f64) -> f64 {
     cohesion + normal_stress * friction_angle_rad.tan()
@@ -196,6 +303,15 @@ pub fn mohr_coulomb_strength(cohesion: f64, friction_angle_rad: f64, normal_stre
 ///
 /// Uses the maximum shear stress and hydrostatic stress from the tensor.
 /// Returns `true` if the rock has failed.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// # use dravya::StressTensor;
+/// let stress = StressTensor::new(100e6, 0.0, 0.0, 0.0, 0.0, 0.0);
+/// assert!(mohr_coulomb_failure(&stress, 10e6, std::f64::consts::FRAC_PI_6));
+/// ```
 #[must_use]
 pub fn mohr_coulomb_failure(stress: &StressTensor, cohesion: f64, friction_angle_rad: f64) -> bool {
     let tau_max = stress.max_shear();
@@ -206,6 +322,16 @@ pub fn mohr_coulomb_failure(stress: &StressTensor, cohesion: f64, friction_angle
 /// Mohr-Coulomb factor of safety.
 ///
 /// FoS = τ_strength / τ_applied
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// # use dravya::StressTensor;
+/// let stress = StressTensor::new(5e6, 5e6, 5e6, 0.0, 0.0, 0.0);
+/// let fos = mohr_coulomb_safety_factor(&stress, 10e6, std::f64::consts::FRAC_PI_6);
+/// assert!(fos > 1.0);
+/// ```
 #[must_use]
 pub fn mohr_coulomb_safety_factor(
     stress: &StressTensor,
@@ -224,6 +350,15 @@ pub fn mohr_coulomb_safety_factor(
 /// for use with dravya's `drucker_prager_check`.
 ///
 /// Returns `(alpha, k)` for the Drucker-Prager yield surface.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let (alpha, k) = mohr_coulomb_to_drucker_prager(std::f64::consts::FRAC_PI_6, 10e6);
+/// assert!(alpha > 0.0);
+/// assert!(k > 0.0);
+/// ```
 #[must_use]
 pub fn mohr_coulomb_to_drucker_prager(friction_angle_rad: f64, cohesion: f64) -> (f64, f64) {
     dravya::yield_criteria::drucker_prager_from_mohr_coulomb(friction_angle_rad, cohesion)
@@ -234,6 +369,15 @@ pub fn mohr_coulomb_to_drucker_prager(friction_angle_rad: f64, cohesion: f64) ->
 // ---------------------------------------------------------------------------
 
 /// Failure mode of rock under given stress conditions.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mode = classify_failure_mode(5e6, 100e6, 10e6,
+///     std::f64::consts::FRAC_PI_6, 150e6);
+/// assert_eq!(mode, FailureMode::Brittle);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FailureMode {
     /// Rock fractures along planes (shallow, low confining pressure).
@@ -255,6 +399,15 @@ pub enum FailureMode {
 /// - `cohesion`: Mohr-Coulomb cohesion in Pa
 /// - `friction_angle_rad`: Mohr-Coulomb friction angle in radians
 /// - `yield_strength`: von Mises yield strength in Pa
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mode = classify_failure_mode(50e6, 10e6, 10e6,
+///     std::f64::consts::FRAC_PI_6, 150e6);
+/// assert_eq!(mode, FailureMode::Stable);
+/// ```
 #[must_use]
 pub fn classify_failure_mode(
     confining_pressure: f64,
@@ -287,6 +440,15 @@ pub fn classify_failure_mode(
 /// - `gravity`: m/s² (9.81)
 ///
 /// Returns depth in metres.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let depth = brittle_ductile_transition_depth(
+///     &granite_material(), 10e6, std::f64::consts::FRAC_PI_6, 9.81);
+/// assert!(depth > 1000.0 && depth < 10_000.0);
+/// ```
 #[must_use]
 pub fn brittle_ductile_transition_depth(
     material: &Material,
@@ -320,6 +482,16 @@ pub fn brittle_ductile_transition_depth(
 /// - `slope_angle_rad`: α, slope angle in radians
 ///
 /// Returns the factor of safety (> 1.0 = stable).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let fos = infinite_slope_safety_factor(
+///     10e3, std::f64::consts::FRAC_PI_6, 26_500.0, 5.0,
+///     30.0_f64.to_radians());
+/// assert!(fos > 0.0);
+/// ```
 #[must_use]
 pub fn infinite_slope_safety_factor(
     cohesion: f64,
@@ -354,6 +526,16 @@ pub fn infinite_slope_safety_factor(
 /// - `reference_temp_c`: reference temperature (typically 20°C)
 ///
 /// Requires the `mechanics` feature (thermodynamics optional — caller provides T).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = granite_material();
+/// let hot = p_wave_at_temperature(&mat, 500.0, 20.0);
+/// let cold = p_wave_at_temperature(&mat, 20.0, 20.0);
+/// assert!(hot < cold);
+/// ```
 #[must_use]
 pub fn p_wave_at_temperature(
     material: &Material,
@@ -367,6 +549,16 @@ pub fn p_wave_at_temperature(
 }
 
 /// Seismic S-wave velocity at depth with temperature correction.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mat = granite_material();
+/// let hot = s_wave_at_temperature(&mat, 500.0, 20.0);
+/// let cold = s_wave_at_temperature(&mat, 20.0, 20.0);
+/// assert!(hot < cold);
+/// ```
 #[must_use]
 pub fn s_wave_at_temperature(
     material: &Material,
@@ -388,6 +580,14 @@ pub fn s_wave_at_temperature(
 /// - `steps`: number of depth points
 ///
 /// Returns `Vec<(depth_km, Vp_m_s, Vs_m_s)>`.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let profile = velocity_depth_profile(&granite_material(), 15.0, 25.0, 30.0, 5);
+/// assert_eq!(profile.len(), 6);
+/// ```
 #[must_use]
 pub fn velocity_depth_profile(
     material: &Material,
@@ -419,6 +619,15 @@ pub fn velocity_depth_profile(
 /// controls the degradation.
 ///
 /// Returns a new `Material` with reduced mechanical properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let fresh = granite_material();
+/// let degraded = weathered_material(&fresh, 0.5);
+/// assert!(degraded.youngs_modulus < fresh.youngs_modulus);
+/// ```
 #[must_use]
 pub fn weathered_material(material: &Material, weathering_fraction: f64) -> Material {
     let w = weathering_fraction.clamp(0.0, 1.0);
@@ -445,6 +654,15 @@ pub fn weathered_material(material: &Material, weathering_fraction: f64) -> Mate
 ///
 /// Returns time to failure in years, or `None` if the rock can sustain the load
 /// indefinitely.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let t = time_to_weathering_failure(&granite_material(), 3000.0, 9.81, 1e-6);
+/// assert!(t.is_some());
+/// assert!(t.unwrap() > 0.0);
+/// ```
 #[must_use]
 pub fn time_to_weathering_failure(
     material: &Material,

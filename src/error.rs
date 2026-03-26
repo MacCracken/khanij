@@ -1,5 +1,15 @@
 use thiserror::Error;
 
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let err = KhanijError::InvalidMineral("unobtanium".into());
+/// assert!(err.to_string().contains("unobtanium"));
+///
+/// let err = KhanijError::InvalidComposition("negative weight%".into());
+/// assert!(err.to_string().contains("negative weight%"));
+/// ```
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum KhanijError {

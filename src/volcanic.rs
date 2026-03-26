@@ -7,8 +7,17 @@ use serde::{Deserialize, Serialize};
 // Volcanic Explosivity Index (VEI)
 // ---------------------------------------------------------------------------
 
-/// Volcanic Explosivity Index (VEI) — integer scale from 0 to 8 describing
+/// Volcanic Explosivity Index (VEI) -- integer scale from 0 to 8 describing
 /// the relative explosiveness of a volcanic eruption.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let vei = classify_vei(1e8);
+/// assert_eq!(vei, Vei::V4);
+/// assert!(Vei::V0 < Vei::V8);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Vei {
@@ -33,9 +42,18 @@ pub enum Vei {
 }
 
 impl Vei {
-    /// Returns the typical ejecta volume range in m³ as `(min, max)`.
+    /// Returns the typical ejecta volume range in m3 as `(min, max)`.
     ///
-    /// Upper bound for VEI 8 is set to 1 × 10¹³ m³ as a practical cap.
+    /// Upper bound for VEI 8 is set to 1e13 m3 as a practical cap.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let (lo, hi) = Vei::V5.ejecta_volume_m3();
+    /// assert!((lo - 1e9).abs() < 1.0);
+    /// assert!(lo < hi);
+    /// ```
     #[must_use]
     pub fn ejecta_volume_m3(&self) -> (f64, f64) {
         match self {
@@ -52,6 +70,14 @@ impl Vei {
     }
 
     /// Short textual description of the eruption severity.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert_eq!(Vei::V0.description(), "non-explosive, effusive");
+    /// assert!(!Vei::V8.description().is_empty());
+    /// ```
     #[must_use]
     pub fn description(&self) -> &'static str {
         match self {
@@ -68,10 +94,19 @@ impl Vei {
     }
 }
 
-/// Classify an eruption by its total ejecta volume in m³.
+/// Classify an eruption by its total ejecta volume in m3.
 ///
 /// Volumes at or below 0 are clamped to [`Vei::V0`]; volumes exceeding
-/// 10¹² m³ are classified as [`Vei::V8`].
+/// 1e12 m3 are classified as [`Vei::V8`].
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_vei(500.0), Vei::V0);
+/// assert_eq!(classify_vei(1e6), Vei::V2);
+/// assert_eq!(classify_vei(1e13), Vei::V8);
+/// ```
 #[must_use]
 pub fn classify_vei(ejecta_volume_m3: f64) -> Vei {
     if ejecta_volume_m3 < 1e4 {
@@ -100,6 +135,17 @@ pub fn classify_vei(ejecta_volume_m3: f64) -> Vei {
 // ---------------------------------------------------------------------------
 
 /// Weight-percent oxide composition of a magma.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mc = MagmaComposition {
+///     sio2: 50.0, al2o3: 15.0, feo: 8.0,
+///     mgo: 7.0, cao: 11.0, na2o: 2.5, k2o: 0.5,
+/// };
+/// assert!((mc.sio2 - 50.0).abs() < 1e-10);
+/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MagmaComposition {
     /// SiO₂ weight percent.
@@ -119,6 +165,14 @@ pub struct MagmaComposition {
 }
 
 /// Broad magma classification based on silica content.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_magma(48.0), MagmaType::Mafic);
+/// assert_eq!(classify_magma(72.0), MagmaType::Felsic);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum MagmaType {
@@ -132,7 +186,15 @@ pub enum MagmaType {
     Felsic,
 }
 
-/// Classify magma by its SiO₂ weight percent.
+/// Classify magma by its SiO2 weight percent.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_magma(40.0), MagmaType::Ultramafic);
+/// assert_eq!(classify_magma(57.0), MagmaType::Intermediate);
+/// ```
 #[must_use]
 pub fn classify_magma(sio2: f64) -> MagmaType {
     if sio2 < 45.0 {
@@ -150,18 +212,27 @@ pub fn classify_magma(sio2: f64) -> MagmaType {
 // Magma viscosity
 // ---------------------------------------------------------------------------
 
-/// Estimate magma dynamic viscosity in Pa·s from SiO₂ content and temperature.
+/// Estimate magma dynamic viscosity in Pa-s from SiO2 content and temperature.
 ///
-/// Viscosity increases exponentially with SiO₂ and decreases with temperature.
+/// Viscosity increases exponentially with SiO2 and decreases with temperature.
 /// Uses a simplified Arrhenius-style model:
 ///
 /// ```text
-/// ln(μ) = -6.4 + 0.05 × SiO₂(%) + 26_000 / T(K)
+/// ln(mu) = -6.4 + 0.05 * SiO2(%) + 26_000 / T(K)
 /// ```
 ///
 /// where T(K) = temperature_c + 273.15.
 ///
 /// Returns `f64::INFINITY` if the temperature is at or below absolute zero.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let v_basalt = magma_viscosity(50.0, 1200.0);
+/// let v_rhyolite = magma_viscosity(75.0, 1200.0);
+/// assert!(v_rhyolite > v_basalt);
+/// ```
 #[must_use]
 pub fn magma_viscosity(sio2_percent: f64, temperature_c: f64) -> f64 {
     let t_k = temperature_c + 273.15;
@@ -180,12 +251,21 @@ pub fn magma_viscosity(sio2_percent: f64, temperature_c: f64) -> f64 {
 /// Eruption column height using the Sparks (1986) scaling relation.
 ///
 /// ```text
-/// H ≈ 0.236 × Q^0.25   (km)
+/// H = 0.236 * Q^0.25   (km)
 /// ```
 ///
 /// where `Q` is the mass eruption rate in kg/s.
 ///
 /// Returns the height in **kilometres**. Returns 0.0 for non-positive flux.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let h = eruption_column_height(1e8);
+/// assert!((h - 23.6).abs() < 0.1);
+/// assert_eq!(eruption_column_height(0.0), 0.0);
+/// ```
 #[must_use]
 pub fn eruption_column_height(mass_flux_kg_s: f64) -> f64 {
     if mass_flux_kg_s <= 0.0 {
@@ -203,13 +283,22 @@ pub fn eruption_column_height(mass_flux_kg_s: f64) -> f64 {
 /// Uses an energy-cone model:
 ///
 /// ```text
-/// R ≈ H / tan(α)
+/// R = H / tan(alpha)
 /// ```
 ///
-/// where `H` is the column collapse height in km and `α` is the terrain
-/// slope in degrees (clamped to \[0.5, 89\] to avoid singularities).
+/// where `H` is the column collapse height in km and `alpha` is the terrain
+/// slope in degrees (clamped to [0.5, 89] to avoid singularities).
 ///
-/// A minimum slope of 0.5° is enforced to prevent unrealistic infinite runout.
+/// A minimum slope of 0.5 degrees is enforced to prevent unrealistic infinite runout.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let r = pyroclastic_flow_runout(10.0, 10.0);
+/// assert!(r > 0.0);
+/// assert_eq!(pyroclastic_flow_runout(0.0, 10.0), 0.0);
+/// ```
 #[must_use]
 pub fn pyroclastic_flow_runout(column_height_km: f64, slope_degrees: f64) -> f64 {
     if column_height_km <= 0.0 {
@@ -227,16 +316,25 @@ pub fn pyroclastic_flow_runout(column_height_km: f64, slope_degrees: f64) -> f64
 /// Lava flow velocity from Jeffreys' equation for a viscous sheet on a slope.
 ///
 /// ```text
-/// v = ρ g h² sin(α) / (3 μ)
+/// v = rho * g * h^2 * sin(alpha) / (3 * mu)
 /// ```
 ///
 /// - `slope_degrees`: terrain slope angle
-/// - `viscosity`: dynamic viscosity in Pa·s
+/// - `viscosity`: dynamic viscosity in Pa-s
 /// - `thickness_m`: flow thickness in metres
-/// - `density`: lava density in kg/m³ (typically 2 200–2 700)
+/// - `density`: lava density in kg/m3 (typically 2200-2700)
 ///
 /// Returns velocity in **m/s**. Returns 0.0 for non-positive or degenerate
 /// inputs.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let v = lava_flow_velocity(10.0, 100.0, 2.0, 2500.0);
+/// assert!(v > 0.0);
+/// assert_eq!(lava_flow_velocity(10.0, 0.0, 2.0, 2500.0), 0.0);
+/// ```
 #[must_use]
 pub fn lava_flow_velocity(
     slope_degrees: f64,

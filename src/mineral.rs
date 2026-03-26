@@ -1,10 +1,32 @@
+use hisab::num;
 use serde::{Deserialize, Serialize};
 
 /// Mohs hardness scale (1-10).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let quartz_hardness = MohsHardness::new(7.0).unwrap();
+/// assert!((quartz_hardness.value() - 7.0).abs() < f32::EPSILON);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct MohsHardness(f32);
 
 impl MohsHardness {
+    /// Create a new `MohsHardness` if the value is within the valid range (1-10).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// // Valid hardness values return Some
+    /// assert!(MohsHardness::new(7.0).is_some());
+    ///
+    /// // Out-of-range values return None
+    /// assert!(MohsHardness::new(0.5).is_none());
+    /// assert!(MohsHardness::new(11.0).is_none());
+    /// ```
     #[must_use]
     pub fn new(value: f32) -> Option<Self> {
         if (1.0..=10.0).contains(&value) {
@@ -13,12 +35,31 @@ impl MohsHardness {
             None
         }
     }
+    /// Returns the numeric Mohs hardness value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let h = MohsHardness::new(5.0).unwrap();
+    /// assert!((h.value() - 5.0).abs() < f32::EPSILON);
+    /// ```
     #[must_use]
     #[inline]
     pub fn value(&self) -> f32 {
         self.0
     }
     /// Can this mineral scratch the other?
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let diamond = MohsHardness::new(10.0).unwrap();
+    /// let quartz = MohsHardness::new(7.0).unwrap();
+    /// assert!(diamond.scratches(&quartz));
+    /// assert!(!quartz.scratches(&diamond));
+    /// ```
     #[must_use]
     #[inline]
     pub fn scratches(&self, other: &Self) -> bool {
@@ -31,6 +72,15 @@ impl MohsHardness {
     /// talc(1)→27, gypsum(2)→61, calcite(3)→157, fluorite(4)→315,
     /// apatite(5)→535, feldspar(6)→795, quartz(7)→1120, topaz(8)→1427,
     /// corundum(9)→2060, diamond(10)→10000.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let quartz = MohsHardness::new(7.0).unwrap();
+    /// let hv = quartz.to_vickers();
+    /// assert!(hv > 500.0 && hv < 1200.0); // quartz is in the mid-range
+    /// ```
     #[must_use]
     pub fn to_vickers(&self) -> f64 {
         let m = self.0 as f64;
@@ -48,6 +98,16 @@ impl MohsHardness {
     /// Approximate Knoop hardness (HK) from Mohs hardness.
     ///
     /// Knoop ≈ Vickers × 1.05 (close relationship for most minerals).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let quartz = MohsHardness::new(7.0).unwrap();
+    /// let hk = quartz.to_knoop();
+    /// // Knoop is slightly higher than Vickers
+    /// assert!(hk > quartz.to_vickers());
+    /// ```
     #[must_use]
     pub fn to_knoop(&self) -> f64 {
         self.to_vickers() * 1.05
@@ -55,29 +115,40 @@ impl MohsHardness {
 
     /// Convert Vickers hardness back to approximate Mohs hardness.
     ///
-    /// Uses iterative search over the Mohs scale since the forward mapping
-    /// is nonlinear. Returns the Mohs value within ±0.1.
+    /// Uses hisab bisection root-finding over the Mohs scale since the
+    /// forward mapping is nonlinear. Returns the Mohs value within ±0.1.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// // Roundtrip: Mohs → Vickers → Mohs
+    /// let original = MohsHardness::new(5.0).unwrap();
+    /// let hv = original.to_vickers();
+    /// let recovered = MohsHardness::from_vickers(hv).unwrap();
+    /// assert!((original.value() - recovered.value()).abs() < 0.1);
+    /// ```
     #[must_use]
     pub fn from_vickers(hv: f64) -> Option<Self> {
         if hv <= 0.0 {
             return None;
         }
-        // Binary search between Mohs 1.0 and 10.0
-        let (mut lo, mut hi) = (1.0_f32, 10.0_f32);
-        for _ in 0..50 {
-            let mid = (lo + hi) / 2.0;
-            let mid_hv = Self(mid).to_vickers();
-            if mid_hv < hv {
-                lo = mid;
-            } else {
-                hi = mid;
-            }
-        }
-        Self::new((lo + hi) / 2.0)
+        let mohs = num::bisection(|m| Self(m as f32).to_vickers() - hv, 1.0, 10.0, 1e-4, 50)
+            .ok()?;
+        Self::new(mohs as f32)
     }
 }
 
 /// A mineral with physical properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let q = Mineral::quartz();
+/// assert_eq!(q.name, "Quartz");
+/// assert!((q.density - 2.65).abs() < 0.01);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Mineral {
     pub name: String,
@@ -90,6 +161,18 @@ pub struct Mineral {
 }
 
 /// Mineral luster classification.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let luster = Luster::Vitreous;
+/// assert_eq!(luster, Luster::Vitreous);
+///
+/// // Minerals carry their luster
+/// assert_eq!(Mineral::quartz().luster, Luster::Vitreous);
+/// assert_eq!(Mineral::pyrite().luster, Luster::Metallic);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Luster {
@@ -105,6 +188,18 @@ pub enum Luster {
 }
 
 impl Mineral {
+    /// Create a quartz mineral with standard properties.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let q = Mineral::quartz();
+    /// assert_eq!(q.name, "Quartz");
+    /// assert_eq!(q.formula, "SiO₂");
+    /// assert!((q.hardness.value() - 7.0).abs() < f32::EPSILON);
+    /// assert_eq!(q.luster, Luster::Vitreous);
+    /// ```
     #[must_use]
     pub fn quartz() -> Self {
         Self {
@@ -288,6 +383,16 @@ impl Mineral {
     }
 
     /// Parse this mineral's formula string into a [`super::formula::Formula`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let q = Mineral::quartz();
+    /// let formula = q.parsed_formula().unwrap();
+    /// assert_eq!(formula.count("Si"), 1);
+    /// assert_eq!(formula.count("O"), 2);
+    /// ```
     #[must_use]
     pub fn parsed_formula(&self) -> Option<super::formula::Formula> {
         super::formula::Formula::parse(&self.formula)

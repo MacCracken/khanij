@@ -4,6 +4,16 @@
 use std::collections::BTreeMap;
 
 /// Parsed mineral formula: a map of element symbol → atom count.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let quartz = Formula::parse("SiO2").unwrap();
+/// assert_eq!(quartz.count("Si"), 1);
+/// assert_eq!(quartz.count("O"), 2);
+/// assert_eq!(quartz.total_atoms(), 3);
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Formula {
     /// Element symbol → total atom count.
@@ -21,6 +31,23 @@ impl Formula {
     /// - Solid-solution notation: `(Mg,Fe)2SiO4` — includes all alternatives
     ///
     /// Returns `None` if the formula is empty or contains unrecognised tokens.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let quartz = Formula::parse("SiO2").unwrap();
+    /// assert_eq!(quartz.count("Si"), 1);
+    /// assert_eq!(quartz.count("O"), 2);
+    ///
+    /// // Parenthesized groups work too
+    /// let apatite = Formula::parse("Ca5(PO4)3F").unwrap();
+    /// assert_eq!(apatite.count("P"), 3);
+    /// assert_eq!(apatite.count("O"), 12);
+    ///
+    /// // Empty formula returns None
+    /// assert!(Formula::parse("").is_none());
+    /// ```
     #[must_use]
     pub fn parse(formula: &str) -> Option<Self> {
         let normalized = normalize_unicode(formula);
@@ -49,12 +76,32 @@ impl Formula {
     }
 
     /// Total number of atoms in the formula.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let calcite = Formula::parse("CaCO3").unwrap();
+    /// assert_eq!(calcite.total_atoms(), 5); // 1 Ca + 1 C + 3 O
+    /// ```
     #[must_use]
     pub fn total_atoms(&self) -> u32 {
         self.elements.values().sum()
     }
 
     /// Get atom count for a specific element.
+    ///
+    /// Returns `0` if the element is not present in the formula.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let hematite = Formula::parse("Fe2O3").unwrap();
+    /// assert_eq!(hematite.count("Fe"), 2);
+    /// assert_eq!(hematite.count("O"), 3);
+    /// assert_eq!(hematite.count("Si"), 0); // not present
+    /// ```
     #[must_use]
     pub fn count(&self, symbol: &str) -> u32 {
         self.elements.get(symbol).copied().unwrap_or(0)

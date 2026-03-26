@@ -11,6 +11,15 @@ use serde::{Deserialize, Serialize};
 /// - `time_years`: elapsed time in years
 ///
 /// Returns fraction of parent remaining (0.0-1.0).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let lambda = IsotopeSystem::C14.decay_constant();
+/// let frac = parent_remaining(lambda, half_life(lambda));
+/// assert!((frac - 0.5).abs() < 0.001);
+/// ```
 #[must_use]
 pub fn parent_remaining(decay_constant: f64, time_years: f64) -> f64 {
     (-decay_constant * time_years).exp()
@@ -24,6 +33,15 @@ pub fn parent_remaining(decay_constant: f64, time_years: f64) -> f64 {
 /// - `daughter_parent_ratio`: D*/P (radiogenic daughter / remaining parent)
 ///
 /// Returns age in years.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let lambda = decay_constant(5730.0);
+/// let age = age_from_ratio(lambda, 1.0).unwrap();
+/// assert!((age - 5730.0).abs() < 10.0); // D/P = 1 means one half-life
+/// ```
 #[must_use]
 pub fn age_from_ratio(decay_constant: f64, daughter_parent_ratio: f64) -> Option<f64> {
     if decay_constant <= 0.0 || daughter_parent_ratio < 0.0 {
@@ -33,12 +51,29 @@ pub fn age_from_ratio(decay_constant: f64, daughter_parent_ratio: f64) -> Option
 }
 
 /// Half-life from decay constant: t½ = ln(2) / λ
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let t = half_life(1.2097e-4);
+/// assert!((t - 5730.0).abs() < 5.0);
+/// ```
 #[must_use]
 pub fn half_life(decay_constant: f64) -> f64 {
     std::f64::consts::LN_2 / decay_constant
 }
 
 /// Decay constant from half-life: λ = ln(2) / t½
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let lambda = decay_constant(5730.0);
+/// let recovered = half_life(lambda);
+/// assert!((recovered - 5730.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn decay_constant(half_life_years: f64) -> f64 {
     std::f64::consts::LN_2 / half_life_years
@@ -49,6 +84,15 @@ pub fn decay_constant(half_life_years: f64) -> f64 {
 // ---------------------------------------------------------------------------
 
 /// Common radiometric dating isotope system.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sys = IsotopeSystem::U238Pb206;
+/// let t = sys.half_life_years();
+/// assert!((t - 4.468e9).abs() < 0.01e9);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum IsotopeSystem {
@@ -70,6 +114,14 @@ pub enum IsotopeSystem {
 
 impl IsotopeSystem {
     /// Decay constant λ in yr⁻¹.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let lambda = IsotopeSystem::C14.decay_constant();
+    /// assert!((lambda - 1.2097e-4).abs() < 1e-7);
+    /// ```
     #[must_use]
     pub fn decay_constant(&self) -> f64 {
         match self {
@@ -84,12 +136,29 @@ impl IsotopeSystem {
     }
 
     /// Half-life in years.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let t = IsotopeSystem::C14.half_life_years();
+    /// assert!((t - 5730.0).abs() < 5.0);
+    /// ```
     #[must_use]
     pub fn half_life_years(&self) -> f64 {
         half_life(self.decay_constant())
     }
 
     /// Useful age range (approximate, in years).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let (min, max) = IsotopeSystem::C14.useful_range();
+    /// assert!(min < max);
+    /// assert!((max - 50_000.0).abs() < 1.0);
+    /// ```
     #[must_use]
     pub fn useful_range(&self) -> (f64, f64) {
         match self {
@@ -104,6 +173,15 @@ impl IsotopeSystem {
     }
 
     /// Calculate age from daughter/parent ratio.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let sys = IsotopeSystem::Rb87Sr87;
+    /// let age = sys.age(0.01).unwrap();
+    /// assert!(age > 0.0);
+    /// ```
     #[must_use]
     pub fn age(&self, daughter_parent_ratio: f64) -> Option<f64> {
         age_from_ratio(self.decay_constant(), daughter_parent_ratio)
@@ -121,6 +199,15 @@ impl IsotopeSystem {
 /// - `fraction_modern`: ratio of sample ¹⁴C to modern ¹⁴C (0.0-1.0)
 ///
 /// Returns age in years before present, or `None` if fraction is invalid.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let age = c14_age(0.5).unwrap();
+/// assert!((age - 5730.0).abs() < 10.0); // half modern = one half-life
+/// assert!(c14_age(0.0).is_none());
+/// ```
 #[must_use]
 pub fn c14_age(fraction_modern: f64) -> Option<f64> {
     if fraction_modern <= 0.0 || fraction_modern > 1.0 {
@@ -131,6 +218,14 @@ pub fn c14_age(fraction_modern: f64) -> Option<f64> {
 }
 
 /// Fraction of modern ¹⁴C remaining at a given age.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let frac = c14_fraction_remaining(5730.0);
+/// assert!((frac - 0.5).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn c14_fraction_remaining(age_years: f64) -> f64 {
     parent_remaining(IsotopeSystem::C14.decay_constant(), age_years)
@@ -143,6 +238,14 @@ pub fn c14_fraction_remaining(age_years: f64) -> f64 {
 /// A single data point for isochron plotting.
 ///
 /// For Rb-Sr: x = ⁸⁷Rb/⁸⁶Sr, y = ⁸⁷Sr/⁸⁶Sr
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let pt = IsochronPoint { x: 0.5, y: 0.710 };
+/// assert!((pt.x - 0.5).abs() < f64::EPSILON);
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct IsochronPoint {
     pub x: f64, // parent/stable ratio
@@ -154,6 +257,20 @@ pub struct IsochronPoint {
 /// The slope of the isochron line = e^(λt) - 1, so t = ln(slope + 1) / λ.
 ///
 /// Returns `(age_years, initial_ratio)` or `None` if insufficient data.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sys = IsotopeSystem::Rb87Sr87;
+/// let pts = vec![
+///     IsochronPoint { x: 0.1, y: 0.705 },
+///     IsochronPoint { x: 1.0, y: 0.718 },
+/// ];
+/// let (age, init) = isochron_age(sys, &pts).unwrap();
+/// assert!(age > 0.0);
+/// assert!(init > 0.0);
+/// ```
 #[must_use]
 pub fn isochron_age(system: IsotopeSystem, points: &[IsochronPoint]) -> Option<(f64, f64)> {
     if points.len() < 2 {
@@ -189,6 +306,15 @@ pub fn isochron_age(system: IsotopeSystem, points: &[IsochronPoint]) -> Option<(
 ///
 /// Closure temperature is the temperature below which the system becomes
 /// closed to diffusive loss of daughter isotopes.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let tc = closure_temperature(IsotopeSystem::U238Pb206, "zircon");
+/// assert_eq!(tc, Some(900.0));
+/// assert!(closure_temperature(IsotopeSystem::C14, "quartz").is_none());
+/// ```
 #[must_use]
 pub fn closure_temperature(system: IsotopeSystem, mineral: &str) -> Option<f64> {
     match (system, mineral.to_lowercase().as_str()) {

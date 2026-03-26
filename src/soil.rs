@@ -1,6 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 /// Soil texture classification (USDA).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let comp = SoilComposition::new(0.40, 0.40, 0.20).unwrap();
+/// assert_eq!(comp.texture(), SoilTexture::Loam);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum SoilTexture {
@@ -19,6 +27,14 @@ pub enum SoilTexture {
 }
 
 /// Soil composition by particle size fractions (sum to 1.0).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let comp = SoilComposition::new(0.40, 0.40, 0.20).unwrap();
+/// assert_eq!(comp.texture(), SoilTexture::Loam);
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SoilComposition {
     pub sand: f32, // > 0.05mm
@@ -27,6 +43,13 @@ pub struct SoilComposition {
 }
 
 impl SoilComposition {
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert!(SoilComposition::new(0.40, 0.40, 0.20).is_some());
+    /// assert!(SoilComposition::new(0.5, 0.5, 0.5).is_none()); // sum != 1
+    /// ```
     #[must_use]
     pub fn new(sand: f32, silt: f32, clay: f32) -> Option<Self> {
         let sum = sand + silt + clay;
@@ -39,7 +62,15 @@ impl SoilComposition {
     /// Classify soil texture from composition using the USDA soil texture triangle.
     ///
     /// Boundaries follow the standard USDA classification with all 12 texture
-    /// classes reachable. Percentages are expressed as fractions (0.0–1.0).
+    /// classes reachable. Percentages are expressed as fractions (0.0-1.0).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let comp = SoilComposition::new(0.90, 0.05, 0.05).unwrap();
+    /// assert_eq!(comp.texture(), SoilTexture::Sand);
+    /// ```
     #[must_use]
     pub fn texture(&self) -> SoilTexture {
         let sand = self.sand;
@@ -103,7 +134,15 @@ impl SoilComposition {
 // USDA Soil Taxonomy — Orders
 // ---------------------------------------------------------------------------
 
-/// USDA Soil Taxonomy order — the 12 top-level soil classifications.
+/// USDA Soil Taxonomy order -- the 12 top-level soil classifications.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(SoilOrder::ALL.len(), 12);
+/// assert_eq!(SoilOrder::Mollisol.fertility(), SoilFertility::High);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum SoilOrder {
@@ -151,6 +190,14 @@ impl SoilOrder {
     ];
 
     /// Typical climate/environment for this soil order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let env = SoilOrder::Mollisol.typical_environment();
+    /// assert_eq!(env, "grasslands/prairies");
+    /// ```
     #[must_use]
     pub fn typical_environment(&self) -> &'static str {
         match self {
@@ -170,6 +217,13 @@ impl SoilOrder {
     }
 
     /// Typical fertility level.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert_eq!(SoilOrder::Oxisol.fertility(), SoilFertility::VeryLow);
+    /// ```
     #[must_use]
     pub fn fertility(&self) -> SoilFertility {
         match self {
@@ -182,6 +236,13 @@ impl SoilOrder {
 }
 
 /// Soil fertility classification.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert!(SoilFertility::High > SoilFertility::VeryLow);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SoilFertility {
     VeryLow,
@@ -195,6 +256,14 @@ pub enum SoilFertility {
 // ---------------------------------------------------------------------------
 
 /// Master soil horizon designation.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let ht = HorizonType::A;
+/// assert_eq!(ht, HorizonType::A);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum HorizonType {
@@ -213,6 +282,22 @@ pub enum HorizonType {
 }
 
 /// A single soil horizon with properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let h = SoilHorizon {
+///     horizon_type: HorizonType::A,
+///     depth_top_cm: 0.0,
+///     depth_bottom_cm: 30.0,
+///     organic_matter: 0.04,
+///     ph: 6.5,
+///     texture: SoilTexture::Loam,
+///     color: "10YR 3/2".into(),
+/// };
+/// assert!((h.thickness_cm() - 30.0).abs() < 0.01);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SoilHorizon {
     /// Horizon type (O, A, E, B, C, R).
@@ -233,13 +318,48 @@ pub struct SoilHorizon {
 
 impl SoilHorizon {
     /// Thickness of this horizon in cm.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let h = SoilHorizon {
+    ///     horizon_type: HorizonType::B,
+    ///     depth_top_cm: 30.0,
+    ///     depth_bottom_cm: 80.0,
+    ///     organic_matter: 0.01,
+    ///     ph: 6.0,
+    ///     texture: SoilTexture::ClayLoam,
+    ///     color: "7.5YR 4/4".into(),
+    /// };
+    /// assert!((h.thickness_cm() - 50.0).abs() < 0.01);
+    /// ```
     #[must_use]
     pub fn thickness_cm(&self) -> f32 {
         self.depth_bottom_cm - self.depth_top_cm
     }
 }
 
-/// A complete soil profile — a vertical sequence of horizons.
+/// A complete soil profile -- a vertical sequence of horizons.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let profile = SoilProfile {
+///     horizons: vec![SoilHorizon {
+///         horizon_type: HorizonType::A,
+///         depth_top_cm: 0.0,
+///         depth_bottom_cm: 25.0,
+///         organic_matter: 0.03,
+///         ph: 6.0,
+///         texture: SoilTexture::SandyLoam,
+///         color: "10YR 3/2".into(),
+///     }],
+///     location: "field site".into(),
+/// };
+/// assert!((profile.total_depth_cm() - 25.0).abs() < 0.01);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SoilProfile {
     pub horizons: Vec<SoilHorizon>,
@@ -248,6 +368,25 @@ pub struct SoilProfile {
 
 impl SoilProfile {
     /// Total depth of the profile in cm.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let profile = SoilProfile {
+    ///     horizons: vec![SoilHorizon {
+    ///         horizon_type: HorizonType::A,
+    ///         depth_top_cm: 0.0,
+    ///         depth_bottom_cm: 40.0,
+    ///         organic_matter: 0.04,
+    ///         ph: 6.5,
+    ///         texture: SoilTexture::Loam,
+    ///         color: "dark".into(),
+    ///     }],
+    ///     location: "site".into(),
+    /// };
+    /// assert!((profile.total_depth_cm() - 40.0).abs() < 0.01);
+    /// ```
     #[must_use]
     pub fn total_depth_cm(&self) -> f32 {
         self.horizons
@@ -257,12 +396,51 @@ impl SoilProfile {
     }
 
     /// Check if the profile has a specific horizon type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let profile = SoilProfile {
+    ///     horizons: vec![SoilHorizon {
+    ///         horizon_type: HorizonType::A,
+    ///         depth_top_cm: 0.0,
+    ///         depth_bottom_cm: 30.0,
+    ///         organic_matter: 0.03,
+    ///         ph: 6.0,
+    ///         texture: SoilTexture::Loam,
+    ///         color: "dark".into(),
+    ///     }],
+    ///     location: "site".into(),
+    /// };
+    /// assert!(profile.has_horizon(HorizonType::A));
+    /// assert!(!profile.has_horizon(HorizonType::B));
+    /// ```
     #[must_use]
     pub fn has_horizon(&self, ht: HorizonType) -> bool {
         self.horizons.iter().any(|h| h.horizon_type == ht)
     }
 
     /// Get the A horizon (topsoil) if present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let profile = SoilProfile {
+    ///     horizons: vec![SoilHorizon {
+    ///         horizon_type: HorizonType::A,
+    ///         depth_top_cm: 0.0,
+    ///         depth_bottom_cm: 30.0,
+    ///         organic_matter: 0.04,
+    ///         ph: 6.5,
+    ///         texture: SoilTexture::Loam,
+    ///         color: "dark".into(),
+    ///     }],
+    ///     location: "site".into(),
+    /// };
+    /// assert!(profile.a_horizon().is_some());
+    /// ```
     #[must_use]
     pub fn a_horizon(&self) -> Option<&SoilHorizon> {
         self.horizons
@@ -271,6 +449,25 @@ impl SoilProfile {
     }
 
     /// Get the B horizon (subsoil) if present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let profile = SoilProfile {
+    ///     horizons: vec![SoilHorizon {
+    ///         horizon_type: HorizonType::A,
+    ///         depth_top_cm: 0.0,
+    ///         depth_bottom_cm: 30.0,
+    ///         organic_matter: 0.03,
+    ///         ph: 6.0,
+    ///         texture: SoilTexture::Loam,
+    ///         color: "dark".into(),
+    ///     }],
+    ///     location: "site".into(),
+    /// };
+    /// assert!(profile.b_horizon().is_none());
+    /// ```
     #[must_use]
     pub fn b_horizon(&self) -> Option<&SoilHorizon> {
         self.horizons
@@ -279,6 +476,26 @@ impl SoilProfile {
     }
 
     /// Average organic matter content of the A horizon.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let profile = SoilProfile {
+    ///     horizons: vec![SoilHorizon {
+    ///         horizon_type: HorizonType::A,
+    ///         depth_top_cm: 0.0,
+    ///         depth_bottom_cm: 30.0,
+    ///         organic_matter: 0.05,
+    ///         ph: 6.5,
+    ///         texture: SoilTexture::Loam,
+    ///         color: "dark".into(),
+    ///     }],
+    ///     location: "site".into(),
+    /// };
+    /// let om = profile.topsoil_organic_matter().unwrap();
+    /// assert!((om - 0.05).abs() < 0.001);
+    /// ```
     #[must_use]
     pub fn topsoil_organic_matter(&self) -> Option<f32> {
         self.a_horizon().map(|h| h.organic_matter)
@@ -286,7 +503,26 @@ impl SoilProfile {
 
     /// Simplified soil order classification from profile properties.
     ///
-    /// This is a simplified key — real taxonomy uses many more diagnostic criteria.
+    /// This is a simplified key -- real taxonomy uses many more diagnostic criteria.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let profile = SoilProfile {
+    ///     horizons: vec![SoilHorizon {
+    ///         horizon_type: HorizonType::A,
+    ///         depth_top_cm: 0.0,
+    ///         depth_bottom_cm: 20.0,
+    ///         organic_matter: 0.02,
+    ///         ph: 6.0,
+    ///         texture: SoilTexture::Sand,
+    ///         color: "10YR 5/3".into(),
+    ///     }],
+    ///     location: "floodplain".into(),
+    /// };
+    /// assert_eq!(profile.classify_order(), SoilOrder::Entisol);
+    /// ```
     #[must_use]
     pub fn classify_order(&self) -> SoilOrder {
         let a = self.a_horizon();
@@ -358,6 +594,13 @@ impl SoilProfile {
 }
 
 /// Soil pH classification.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_ph(6.8), SoilPhClass::Neutral);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum SoilPhClass {
@@ -375,6 +618,15 @@ pub enum SoilPhClass {
 }
 
 /// Classify soil pH into USDA categories.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_ph(4.0), SoilPhClass::ExtremelyAcid);
+/// assert_eq!(classify_ph(7.0), SoilPhClass::Neutral);
+/// assert_eq!(classify_ph(8.5), SoilPhClass::StronglyAlkaline);
+/// ```
 #[must_use]
 pub fn classify_ph(ph: f32) -> SoilPhClass {
     if ph < 3.5 {
@@ -404,12 +656,20 @@ pub fn classify_ph(ph: f32) -> SoilPhClass {
 
 /// Cation exchange capacity estimate from clay content and organic matter.
 ///
-/// CEC ≈ 0.5 × clay% + 2.0 × OM%
+/// CEC = 0.5 x clay% + 2.0 x OM%
 ///
 /// - `clay_fraction`: clay content as fraction (0.0-1.0)
 /// - `organic_matter_fraction`: OM as fraction (0.0-1.0)
 ///
 /// Returns CEC in meq/100g (milliequivalents per 100 grams).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cec = cation_exchange_capacity(0.30, 0.05);
+/// assert!((cec - 25.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn cation_exchange_capacity(clay_fraction: f32, organic_matter_fraction: f32) -> f32 {
     0.5 * (clay_fraction * 100.0) + 2.0 * (organic_matter_fraction * 100.0)
@@ -418,6 +678,14 @@ pub fn cation_exchange_capacity(clay_fraction: f32, organic_matter_fraction: f32
 /// Soil water holding capacity estimate.
 ///
 /// Returns available water capacity in mm/m depth.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let awc = available_water_capacity(SoilTexture::Loam);
+/// assert!((awc - 170.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn available_water_capacity(texture: SoilTexture) -> f32 {
     match texture {
@@ -437,6 +705,14 @@ pub fn available_water_capacity(texture: SoilTexture) -> f32 {
 }
 
 /// Saturated hydraulic conductivity estimate from texture in mm/hr.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let k = hydraulic_conductivity_mm_hr(SoilTexture::Sand);
+/// assert!((k - 210.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn hydraulic_conductivity_mm_hr(texture: SoilTexture) -> f32 {
     match texture {

@@ -4,6 +4,15 @@ use serde::{Deserialize, Serialize};
 ///
 /// Lengths `a`, `b`, `c` are in angstroms (Å).
 /// Angles `alpha`, `beta`, `gamma` are in degrees.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cell = UnitCell::cubic(5.64);
+/// assert!(cell.is_cubic());
+/// assert!((cell.volume() - 5.64_f64.powi(3)).abs() < 0.01);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct UnitCell {
     /// Lattice parameter a (Å).
@@ -22,6 +31,14 @@ pub struct UnitCell {
 
 impl UnitCell {
     /// Create a new unit cell from lattice parameters.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::new(4.0, 5.0, 6.0, 90.0, 90.0, 90.0);
+    /// assert!(cell.is_orthorhombic());
+    /// ```
     #[must_use]
     pub fn new(a: f64, b: f64, c: f64, alpha: f64, beta: f64, gamma: f64) -> Self {
         Self {
@@ -35,12 +52,29 @@ impl UnitCell {
     }
 
     /// Create a cubic unit cell (a = b = c, α = β = γ = 90°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::cubic(3.0);
+    /// assert!(cell.is_cubic());
+    /// assert!((cell.volume() - 27.0).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn cubic(a: f64) -> Self {
         Self::new(a, a, a, 90.0, 90.0, 90.0)
     }
 
     /// Create a hexagonal unit cell (a = b ≠ c, α = β = 90°, γ = 120°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::hexagonal(4.913, 5.405);
+    /// assert!(cell.is_hexagonal());
+    /// ```
     #[must_use]
     pub fn hexagonal(a: f64, c: f64) -> Self {
         Self::new(a, a, c, 90.0, 90.0, 120.0)
@@ -48,12 +82,28 @@ impl UnitCell {
 
     /// Create a rhombohedral unit cell (a = b ≠ c, α = β = 90°, γ = 120°)
     /// using the hexagonal setting commonly used in crystallography.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::rhombohedral(4.989, 17.062);
+    /// assert!(cell.is_hexagonal());
+    /// ```
     #[must_use]
     pub fn rhombohedral(a: f64, c: f64) -> Self {
         Self::hexagonal(a, c)
     }
 
     /// Create an orthorhombic unit cell (a ≠ b ≠ c, α = β = γ = 90°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::orthorhombic(3.0, 4.0, 5.0);
+    /// assert!((cell.volume() - 60.0).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn orthorhombic(a: f64, b: f64, c: f64) -> Self {
         Self::new(a, b, c, 90.0, 90.0, 90.0)
@@ -62,24 +112,58 @@ impl UnitCell {
     // ── Preset minerals ──────────────────────────────────────────────
 
     /// Halite (NaCl) — cubic, a = 5.64 Å.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::halite();
+    /// assert!(cell.is_cubic());
+    /// assert!((cell.a - 5.64).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn halite() -> Self {
         Self::cubic(5.64)
     }
 
     /// Quartz (SiO₂) — hexagonal, a = 4.913 Å, c = 5.405 Å.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::quartz();
+    /// assert!(cell.is_hexagonal());
+    /// ```
     #[must_use]
     pub fn quartz() -> Self {
         Self::hexagonal(4.913, 5.405)
     }
 
     /// Calcite (CaCO₃) — rhombohedral (hex setting), a = 4.989 Å, c = 17.062 Å.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::calcite();
+    /// assert!((cell.a - 4.989).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn calcite() -> Self {
         Self::rhombohedral(4.989, 17.062)
     }
 
     /// Diamond (C) — cubic, a = 3.567 Å.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::diamond();
+    /// assert!(cell.is_cubic());
+    /// assert!((cell.a - 3.567).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn diamond() -> Self {
         Self::cubic(3.567)
@@ -90,6 +174,14 @@ impl UnitCell {
     /// Unit cell volume using the general triclinic formula (ų).
     ///
     /// V = abc √(1 − cos²α − cos²β − cos²γ + 2·cosα·cosβ·cosγ)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let vol = UnitCell::cubic(5.0).volume();
+    /// assert!((vol - 125.0).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn volume(&self) -> f64 {
         let ca = self.alpha.to_radians().cos();
@@ -100,6 +192,14 @@ impl UnitCell {
     }
 
     /// Returns `true` if the cell is cubic (a ≈ b ≈ c, all angles ≈ 90°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert!(UnitCell::halite().is_cubic());
+    /// assert!(!UnitCell::quartz().is_cubic());
+    /// ```
     #[must_use]
     pub fn is_cubic(&self) -> bool {
         let tol = 1e-6;
@@ -111,6 +211,14 @@ impl UnitCell {
     }
 
     /// Returns `true` if the cell is hexagonal (a ≈ b, α ≈ β ≈ 90°, γ ≈ 120°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert!(UnitCell::quartz().is_hexagonal());
+    /// assert!(!UnitCell::halite().is_hexagonal());
+    /// ```
     #[must_use]
     pub fn is_hexagonal(&self) -> bool {
         let tol = 1e-6;
@@ -121,6 +229,14 @@ impl UnitCell {
     }
 
     /// Returns `true` if the cell is tetragonal (a ≈ b ≠ c, all angles ≈ 90°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::new(4.0, 4.0, 6.0, 90.0, 90.0, 90.0);
+    /// assert!(cell.is_tetragonal());
+    /// ```
     #[must_use]
     pub fn is_tetragonal(&self) -> bool {
         let tol = 1e-6;
@@ -132,6 +248,14 @@ impl UnitCell {
     }
 
     /// Returns `true` if the cell is orthorhombic (a ≠ b ≠ c, all angles ≈ 90°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cell = UnitCell::orthorhombic(3.0, 4.0, 5.0);
+    /// assert!(cell.is_orthorhombic());
+    /// ```
     #[must_use]
     pub fn is_orthorhombic(&self) -> bool {
         let tol = 1e-6;
@@ -144,6 +268,14 @@ impl UnitCell {
 }
 
 /// Miller indices (hkl) denoting a crystallographic plane.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let hkl = MillerIndex::new(1, 1, 1);
+/// assert_eq!(format!("{hkl}"), "(1 1 1)");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct MillerIndex {
     /// h index.
@@ -156,6 +288,14 @@ pub struct MillerIndex {
 
 impl MillerIndex {
     /// Create a new Miller index.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let hkl = MillerIndex::new(2, 0, 0);
+    /// assert_eq!(hkl.h, 2);
+    /// ```
     #[must_use]
     pub fn new(h: i32, k: i32, l: i32) -> Self {
         Self { h, k, l }
@@ -177,6 +317,16 @@ impl core::fmt::Display for MillerIndex {
 /// # Panics
 ///
 /// Panics if the denominator under the square root is zero (i.e. h = k = l = 0).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cell = UnitCell::halite();
+/// let hkl = MillerIndex::new(2, 0, 0);
+/// let d = d_spacing(&cell, &hkl);
+/// assert!((d - 2.82).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn d_spacing(cell: &UnitCell, hkl: &MillerIndex) -> f64 {
     let h2 = f64::from(hkl.h * hkl.h);
@@ -197,6 +347,15 @@ pub fn d_spacing(cell: &UnitCell, hkl: &MillerIndex) -> f64 {
 ///
 /// Uses first-order diffraction (n = 1). Returns `None` when λ / (2d) > 1
 /// (no diffraction possible).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let angle = bragg_angle(3.256, 1.5406).unwrap();
+/// assert!((angle - 13.68).abs() < 0.05);
+/// assert!(bragg_angle(0.5, 1.5406).is_none());
+/// ```
 #[must_use]
 pub fn bragg_angle(d_spacing: f64, wavelength: f64) -> Option<f64> {
     let sin_theta = wavelength / (2.0 * d_spacing);
@@ -210,6 +369,16 @@ pub fn bragg_angle(d_spacing: f64, wavelength: f64) -> Option<f64> {
 /// Wavelength λ (Å) from Bragg's law: λ = 2d sin θ.
 ///
 /// `angle_deg` is the Bragg angle θ in degrees (first-order, n = 1).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let d = 3.256;
+/// let angle = bragg_angle(d, 1.5406).unwrap();
+/// let lambda = bragg_wavelength(d, angle);
+/// assert!((lambda - 1.5406).abs() < 1e-4);
+/// ```
 #[must_use]
 pub fn bragg_wavelength(d_spacing: f64, angle_deg: f64) -> f64 {
     2.0 * d_spacing * angle_deg.to_radians().sin()

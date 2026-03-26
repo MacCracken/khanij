@@ -2,6 +2,14 @@ use hisab::calc;
 use serde::{Deserialize, Serialize};
 
 /// Ore deposit type.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let dt = DepositType::Porphyry;
+/// assert_eq!(dt, DepositType::Porphyry);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum DepositType {
@@ -14,6 +22,13 @@ pub enum DepositType {
 }
 
 /// Resource confidence classification (JORC/CIM/NI 43-101 style).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert!(ResourceCategory::Inferred < ResourceCategory::Measured);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ResourceCategory {
@@ -26,6 +41,14 @@ pub enum ResourceCategory {
 }
 
 /// An ore deposit with validated fields.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let d = OreDeposit::new("Gold", DepositType::Vein, 0.01, 200.0, 50_000.0);
+/// assert!(d.is_some());
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OreDeposit {
     pub mineral: String,
@@ -39,6 +62,16 @@ impl OreDeposit {
     /// Create a new ore deposit with validated fields.
     /// Returns `None` if grade is not in `[0.0, 1.0]`, depth is not positive,
     /// or tonnage is not positive.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let valid = OreDeposit::new("Cu", DepositType::Porphyry, 0.02, 500.0, 1e5);
+    /// assert!(valid.is_some());
+    /// let invalid = OreDeposit::new("Cu", DepositType::Porphyry, -0.1, 500.0, 1e5);
+    /// assert!(invalid.is_none());
+    /// ```
     #[must_use]
     pub fn new(
         mineral: impl Into<String>,
@@ -60,12 +93,29 @@ impl OreDeposit {
     }
 
     /// Contained metal in tonnes (grade × tonnage).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let d = OreDeposit::new("Cu", DepositType::Porphyry, 0.05, 100.0, 1_000_000.0).unwrap();
+    /// assert!((d.contained_metal() - 50_000.0).abs() < 1.0);
+    /// ```
     #[must_use]
     pub fn contained_metal(&self) -> f64 {
         self.grade as f64 * self.tonnage
     }
 
     /// Revenue estimate at a given metal price (contained metal × price).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let d = OreDeposit::new("Au", DepositType::Vein, 0.001, 200.0, 1e6).unwrap();
+    /// let rev = d.gross_revenue(60_000_000.0);
+    /// assert!(rev > 0.0);
+    /// ```
     #[must_use]
     pub fn gross_revenue(&self, price_per_tonne: f64) -> f64 {
         self.contained_metal() * price_per_tonne
@@ -73,6 +123,14 @@ impl OreDeposit {
 
     /// Stripping ratio estimate: depth-based proxy for open-pit vs underground.
     /// Returns approximate waste-to-ore ratio. Higher depth → higher ratio.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let d = OreDeposit::new("Cu", DepositType::Porphyry, 0.02, 500.0, 1e5).unwrap();
+    /// assert!(d.stripping_ratio() > 1.0);
+    /// ```
     #[must_use]
     pub fn stripping_ratio(&self) -> f64 {
         // Simple model: ratio increases linearly with depth
@@ -82,6 +140,18 @@ impl OreDeposit {
 }
 
 /// A tonnage-grade data point for building curves.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let pt = TonnageGradePoint {
+///     cutoff_grade: 0.01,
+///     tonnage_above_cutoff: 5000.0,
+///     average_grade_above_cutoff: 0.025,
+/// };
+/// assert!(pt.tonnage_above_cutoff > 0.0);
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct TonnageGradePoint {
     pub cutoff_grade: f64,
@@ -98,6 +168,16 @@ pub struct TonnageGradePoint {
 /// - `cutoff_steps`: number of cutoff grades to evaluate between min and max grade
 ///
 /// Returns a sorted vector of [`TonnageGradePoint`]s from lowest to highest cutoff.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let blocks = vec![(1000.0, 0.01), (2000.0, 0.02), (500.0, 0.05)];
+/// let curve = tonnage_grade_curve(&blocks, 4);
+/// assert!(!curve.is_empty());
+/// assert!(curve[0].tonnage_above_cutoff >= curve.last().unwrap().tonnage_above_cutoff);
+/// ```
 #[must_use]
 pub fn tonnage_grade_curve(blocks: &[(f64, f64)], cutoff_steps: usize) -> Vec<TonnageGradePoint> {
     if blocks.is_empty() || cutoff_steps == 0 {
@@ -151,6 +231,14 @@ pub fn tonnage_grade_curve(blocks: &[(f64, f64)], cutoff_steps: usize) -> Vec<To
 /// - `recovery`: metallurgical recovery fraction (0.0-1.0, typically 0.7-0.95)
 ///
 /// Returns the cutoff grade as a fraction.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cog = cutoff_grade(60_000_000.0, 50.0, 0.90).unwrap();
+/// assert!(cog > 0.0 && cog < 0.001);
+/// ```
 #[must_use]
 pub fn cutoff_grade(price_per_tonne: f64, cost_per_tonne: f64, recovery: f64) -> Option<f64> {
     if price_per_tonne <= 0.0 || recovery <= 0.0 || recovery > 1.0 {
@@ -169,6 +257,13 @@ pub fn cutoff_grade(price_per_tonne: f64, cost_per_tonne: f64, recovery: f64) ->
 ///
 /// Integrates `grade * price_per_tonne` over the tonnage range and compares
 /// against extraction cost.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert!(is_economically_viable(0.05, 1_000_000.0, 5000.0, 100_000_000.0));
+/// ```
 #[must_use]
 pub fn is_economically_viable(
     grade: f32,
@@ -197,6 +292,14 @@ pub fn is_economically_viable(
 /// - `years`: mine life in years
 ///
 /// Uses hisab integration over continuous discounting.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let npv = net_present_value(10_000_000.0, 7_000_000.0, 0.08, 10.0).unwrap();
+/// assert!(npv > 0.0);
+/// ```
 #[must_use]
 pub fn net_present_value(
     annual_revenue: f64,

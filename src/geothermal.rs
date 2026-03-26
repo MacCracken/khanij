@@ -16,6 +16,14 @@ use ushma::transfer;
 /// - `depth`: depth in metres
 ///
 /// Returns heat flux in watts.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let q = heat_flux(2.5, 1.0, 373.15, 288.15, 1000.0);
+/// assert!(q.unwrap() > 0.0);
+/// ```
 #[must_use]
 pub fn heat_flux(
     conductivity: f64,
@@ -32,6 +40,14 @@ pub fn heat_flux(
 /// - `surface_temp_k`: surface temperature in kelvin
 /// - `gradient_k_per_m`: geothermal gradient (typical: ~0.025 K/m = 25°C/km)
 /// - `depth_m`: depth in metres
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let t = temperature_at_depth(288.15, 0.025, 1000.0);
+/// assert!((t - 313.15).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn temperature_at_depth(surface_temp_k: f64, gradient_k_per_m: f64, depth_m: f64) -> f64 {
     surface_temp_k + gradient_k_per_m * depth_m
@@ -44,6 +60,14 @@ pub fn temperature_at_depth(surface_temp_k: f64, gradient_k_per_m: f64, depth_m:
 /// - `specific_heat`: J/(kg·K)
 ///
 /// Returns diffusivity in m²/s.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let alpha = rock_thermal_diffusivity(2.5, 2700.0, 790.0).unwrap();
+/// assert!(alpha > 1e-7 && alpha < 1e-5);
+/// ```
 #[must_use]
 pub fn rock_thermal_diffusivity(
     conductivity: f64,
@@ -58,6 +82,14 @@ pub fn rock_thermal_diffusivity(
 /// - `mass_kg`: mass of rock body in kg
 /// - `specific_heat`: J/(kg·K)
 /// - `delta_t`: temperature change in K
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let q = heat_stored(1.0, 790.0, 100.0);
+/// assert!((q - 79_000.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn heat_stored(mass_kg: f64, specific_heat: f64, delta_t: f64) -> f64 {
     transfer::heat_stored(mass_kg, specific_heat, delta_t)
@@ -70,6 +102,14 @@ pub fn heat_stored(mass_kg: f64, specific_heat: f64, delta_t: f64) -> f64 {
 /// - `depth_m`: depth in metres
 ///
 /// Returns pressure in pascals.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let p = lithostatic_pressure(2700.0, 9.81, 1000.0);
+/// assert!((p - 26_487_000.0).abs() < 1000.0);
+/// ```
 #[must_use]
 pub fn lithostatic_pressure(density: f64, gravity: f64, depth_m: f64) -> f64 {
     density * gravity * depth_m
@@ -81,6 +121,14 @@ pub fn lithostatic_pressure(density: f64, gravity: f64, depth_m: f64) -> f64 {
 /// - `enthalpy`: H in joules
 /// - `temperature`: T in kelvin
 /// - `entropy`: S in J/K
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let g = gibbs_energy(-50_000.0, 298.15, 100.0);
+/// assert!(g < 0.0);
+/// ```
 #[must_use]
 pub fn gibbs_energy(enthalpy: f64, temperature: f64, entropy: f64) -> f64 {
     ushma::entropy::gibbs(enthalpy, temperature, entropy)
@@ -88,6 +136,14 @@ pub fn gibbs_energy(enthalpy: f64, temperature: f64, entropy: f64) -> f64 {
 
 /// Check if a metamorphic reaction is thermodynamically spontaneous.
 /// Returns `true` when ΔG < 0.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert!(is_spontaneous(-50_000.0, 298.15, 100.0));
+/// assert!(!is_spontaneous(50_000.0, 298.15, 10.0));
+/// ```
 #[must_use]
 pub fn is_spontaneous(delta_h: f64, temperature: f64, delta_s: f64) -> bool {
     gibbs_energy(delta_h, temperature, delta_s) < 0.0
@@ -101,12 +157,28 @@ pub fn is_spontaneous(delta_h: f64, temperature: f64, delta_s: f64) -> bool {
 /// - `volume_m3`: available pore volume in m³
 ///
 /// Returns pressure in pascals.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let p = volatile_pressure(1.0, 473.15, 0.001).unwrap();
+/// assert!(p > 3_000_000.0 && p < 5_000_000.0);
+/// ```
 #[must_use]
 pub fn volatile_pressure(moles: f64, temperature_k: f64, volume_m3: f64) -> Option<f64> {
     state::ideal_gas_pressure(moles, temperature_k, volume_m3).ok()
 }
 
 /// Metamorphic facies classification based on pressure-temperature conditions.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let facies = classify_facies(350.0, 0.4);
+/// assert_eq!(facies, MetamorphicFacies::Greenschist);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum MetamorphicFacies {
@@ -130,6 +202,14 @@ pub enum MetamorphicFacies {
 ///
 /// - `temperature_c`: temperature in degrees Celsius
 /// - `pressure_gpa`: pressure in gigapascals
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_facies(150.0, 0.1), MetamorphicFacies::Zeolite);
+/// assert_eq!(classify_facies(600.0, 1.5), MetamorphicFacies::Eclogite);
+/// ```
 #[must_use]
 pub fn classify_facies(temperature_c: f64, pressure_gpa: f64) -> MetamorphicFacies {
     // Eclogite: high P, moderate-high T
@@ -168,6 +248,14 @@ pub fn classify_facies(temperature_c: f64, pressure_gpa: f64) -> MetamorphicFaci
 /// - `gradient_c_per_km`: geothermal gradient in °C/km (typical: 25)
 /// - `surface_temp_c`: surface temperature in °C
 /// - `rock_density`: average rock density in kg/m³ (typical: 2700)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let f = facies_at_depth(5.0, 25.0, 15.0, 2700.0);
+/// assert_eq!(f, MetamorphicFacies::Zeolite);
+/// ```
 #[must_use]
 pub fn facies_at_depth(
     depth_km: f64,
@@ -192,6 +280,14 @@ pub fn facies_at_depth(
 /// - `time_seconds`: elapsed time since emplacement
 ///
 /// Returns temperature in kelvin at the centre of the intrusion.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let t = intrusion_cooling(1473.0, 573.0, 50.0, 1e-6, 0.0);
+/// assert!((t - 1473.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn intrusion_cooling(
     magma_temp_k: f64,
@@ -211,6 +307,14 @@ pub fn intrusion_cooling(
 /// Inverts the cooling model: t = -R² · ln((T_target - T_country)/(T_magma - T_country)) / (π²·α)
 ///
 /// Returns time in seconds, or `None` if the target is outside the valid range.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let time = intrusion_cooling_time(1473.0, 573.0, 800.0, 50.0, 1e-6);
+/// assert!(time.unwrap() > 0.0);
+/// ```
 #[must_use]
 pub fn intrusion_cooling_time(
     magma_temp_k: f64,
@@ -235,6 +339,14 @@ pub fn intrusion_cooling_time(
 /// - `half_width_m`: half-thickness of the intrusion
 /// - `magma_temp_k`: magma temperature at contact
 /// - `country_temp_k`: far-field country rock temperature
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let t = contact_aureole_temperature(0.0, 50.0, 1473.0, 573.0);
+/// assert!((t - 1473.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn contact_aureole_temperature(
     distance_m: f64,

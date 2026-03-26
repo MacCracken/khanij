@@ -7,6 +7,17 @@ use pravash::buoyancy;
 use pravash::{FluidConfig, FluidParticle};
 
 /// Fluid presets for geological contexts.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::hydrology::fluids;
+/// let gw = fluids::GROUNDWATER;
+/// assert!((gw.density - 1000.0).abs() < 1.0);
+///
+/// let lava = fluids::LAVA;
+/// assert!(lava.density > 2500.0);
+/// ```
 pub mod fluids {
     use pravash::FluidMaterial;
 
@@ -18,6 +29,14 @@ pub mod fluids {
 
     /// Create a brine fluid (saline groundwater).
     /// - `salinity_fraction`: salt mass fraction (0.0-0.35)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::hydrology::fluids;
+    /// let seawater = fluids::brine(0.035).unwrap();
+    /// assert!(seawater.density > 1000.0);
+    /// ```
     #[must_use]
     pub fn brine(salinity_fraction: f64) -> Option<FluidMaterial> {
         if !(0.0..=0.35).contains(&salinity_fraction) {
@@ -32,6 +51,14 @@ pub mod fluids {
 
     /// Create a sediment-laden flow (turbidity current / debris flow).
     /// - `sediment_fraction`: volume fraction of suspended sediment (0.0-0.6)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::hydrology::fluids;
+    /// let laden = fluids::sediment_laden(0.3).unwrap();
+    /// assert!(laden.density > 1400.0);
+    /// ```
     #[must_use]
     pub fn sediment_laden(sediment_fraction: f64) -> Option<FluidMaterial> {
         if !(0.0..=0.6).contains(&sediment_fraction) {
@@ -53,6 +80,14 @@ pub mod fluids {
 /// - `grain_diameter_m`: grain diameter in metres
 /// - `fluid_viscosity`: dynamic viscosity in Pa·s (water: 0.001)
 /// - `gravity`: gravitational acceleration (9.81 m/s²)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let v = stokes_settling_velocity(2650.0, 1000.0, 0.0005, 0.001, 9.81);
+/// assert!(v > 0.1 && v < 1.0);
+/// ```
 #[must_use]
 pub fn stokes_settling_velocity(
     grain_density: f64,
@@ -67,6 +102,14 @@ pub fn stokes_settling_velocity(
 
 /// Reynolds number for flow around a sediment grain.
 /// Determines whether Stokes' law is valid (Re < 1).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let re = grain_reynolds_number(1000.0, 0.01, 0.001, 0.001).unwrap();
+/// assert!(re > 0.0);
+/// ```
 #[must_use]
 pub fn grain_reynolds_number(
     fluid_density: f64,
@@ -78,6 +121,15 @@ pub fn grain_reynolds_number(
 }
 
 /// Flow regime classification for sediment transport.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// // Slow groundwater flow is laminar
+/// let regime = flow_regime(1000.0, 0.0001, 0.01, 0.001);
+/// assert!(regime.is_some());
+/// ```
 #[must_use]
 pub fn flow_regime(
     fluid_density: f64,
@@ -101,6 +153,14 @@ pub fn flow_regime(
 /// - `fluid_density`: kg/m³
 /// - `gravity`: m/s²
 /// - `displaced_volume`: m³
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let fb = buoyancy_force(1000.0, 9.81, 1.0);
+/// assert!((fb - 9810.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn buoyancy_force(fluid_density: f64, gravity: f64, displaced_volume: f64) -> f64 {
     buoyancy::buoyancy_force(fluid_density, gravity, displaced_volume)
@@ -112,6 +172,14 @@ pub fn buoyancy_force(fluid_density: f64, gravity: f64, displaced_volume: f64) -
 /// - `velocity`: m/s
 /// - `drag_coefficient`: dimensionless (sphere ≈ 0.47)
 /// - `cross_section_area`: m²
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let fd = sediment_drag_force(1000.0, 1.0, 0.47, 0.01);
+/// assert!(fd > 0.0);
+/// ```
 #[must_use]
 pub fn sediment_drag_force(
     fluid_density: f64,
@@ -134,6 +202,14 @@ pub fn sediment_drag_force(
 /// - `fluid_density`: kg/m³
 /// - `drag_coefficient`: dimensionless
 /// - `area`: cross-sectional area in m²
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let vt = terminal_velocity(0.01, 9.81, 1000.0, 0.47, 0.001).unwrap();
+/// assert!(vt > 0.0);
+/// ```
 #[must_use]
 pub fn terminal_velocity(
     mass: f64,
@@ -152,6 +228,15 @@ pub fn terminal_velocity(
 /// - `area`: cross-sectional area in m²
 ///
 /// Returns volumetric flow rate in m³/s.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// # use khanij::hydrology::conductivity;
+/// let q = darcy_flow(conductivity::SANDSTONE, 0.01, 100.0);
+/// assert!((q - 1e-6).abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn darcy_flow(hydraulic_conductivity: f64, hydraulic_gradient: f64, area: f64) -> f64 {
     hydraulic_conductivity * hydraulic_gradient * area
@@ -159,6 +244,13 @@ pub fn darcy_flow(hydraulic_conductivity: f64, hydraulic_gradient: f64, area: f6
 
 /// Aquifer storage coefficient (storativity) — dimensionless.
 /// Fraction of water released per unit area per unit decline in head.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::hydrology::storativity;
+/// assert!(storativity::UNCONFINED_SAND > storativity::CONFINED_TYPICAL);
+/// ```
 pub mod storativity {
     /// Confined aquifer (typical range 1e-5 to 1e-3).
     pub const CONFINED_TYPICAL: f64 = 1e-4;
@@ -169,30 +261,33 @@ pub mod storativity {
     pub const UNCONFINED_CLAY: f64 = 0.03;
 }
 
-/// Theis well function W(u) — approximated using the series expansion.
+/// Theis well function W(u) — the exponential integral E₁(u).
 ///
-/// W(u) = -γ - ln(u) + u - u²/4 + u³/18 - ...
+/// W(u) = ∫_u^∞ (e⁻ᵗ / t) dt
 ///
 /// Valid for u > 0. Used in the Theis equation for transient well drawdown.
+/// Computed via hisab Gauss-Legendre quadrature.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let w = well_function(0.01);
+/// assert!(w > well_function(0.1));
+/// ```
 #[must_use]
 pub fn well_function(u: f64) -> f64 {
+    use hisab::calc;
     if u <= 0.0 {
         return f64::INFINITY;
     }
-    // Euler-Mascheroni constant
-    const GAMMA: f64 = 0.577_215_664_901_532_9;
-    let mut sum = -GAMMA - u.ln();
-    let mut term = u;
-    // Series: Σ (-1)^(n+1) · u^n / (n · n!)
-    for n in 1..=20 {
-        sum += term / (n as f64 * factorial(n));
-        term *= -u;
-    }
-    sum.max(0.0)
-}
-
-fn factorial(n: usize) -> f64 {
-    (1..=n).fold(1.0, |acc, i| acc * i as f64)
+    // Substitution t = e^s transforms ∫_u^∞ e^(-t)/t dt into ∫_{ln(u)}^∞ e^{-e^s} ds,
+    // which is smooth and well-behaved for numerical integration.
+    let s_lo = u.ln();
+    let s_hi = (u + 40.0).ln(); // e^(-40) ≈ 4e-18, tail is negligible
+    calc::integral_gauss_legendre(|s| (-s.exp()).exp(), s_lo, s_hi, 200)
+        .unwrap_or(0.0)
+        .max(0.0)
 }
 
 /// Theis equation: drawdown at distance `r` from a pumping well at time `t`.
@@ -206,6 +301,14 @@ fn factorial(n: usize) -> f64 {
 /// - `time_seconds`: t, time since pumping began
 ///
 /// Returns drawdown in metres.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let s = theis_drawdown(0.01, 0.001, 1e-4, 10.0, 86400.0);
+/// assert!(s > 0.0);
+/// ```
 #[must_use]
 pub fn theis_drawdown(
     pumping_rate: f64,
@@ -228,6 +331,14 @@ pub fn theis_drawdown(
 /// s ≈ Q / (4π·T) · [ln(2.25·T·t / (r²·S))]
 ///
 /// Same parameters as `theis_drawdown`.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cj = cooper_jacob_drawdown(0.01, 0.001, 1e-4, 10.0, 864_000.0);
+/// assert!(cj > 0.0);
+/// ```
 #[must_use]
 pub fn cooper_jacob_drawdown(
     pumping_rate: f64,
@@ -255,12 +366,27 @@ pub fn cooper_jacob_drawdown(
 /// - `time_seconds`: time since pumping began
 ///
 /// Returns radius in metres.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let r = radius_of_influence(0.001, 1e-4, 86400.0);
+/// assert!(r > 0.0);
+/// ```
 #[must_use]
 pub fn radius_of_influence(transmissivity: f64, storativity: f64, time_seconds: f64) -> f64 {
     (2.25 * transmissivity * time_seconds / storativity).sqrt()
 }
 
 /// Hydraulic conductivity values for common rock types in m/s.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::hydrology::conductivity;
+/// assert!(conductivity::GRAVEL > conductivity::CLAY);
+/// ```
 pub mod conductivity {
     pub const GRAVEL: f64 = 1e-2;
     pub const COARSE_SAND: f64 = 1e-3;
@@ -279,6 +405,14 @@ pub mod conductivity {
 /// - `width`: domain width in metres
 /// - `height`: domain height in metres
 /// - `smoothing_radius`: SPH kernel radius (typical: 0.1-1.0 m)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let config = surface_water_config(100.0, 50.0, 0.5);
+/// assert!((config.rest_density - 1000.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn surface_water_config(width: f64, height: f64, smoothing_radius: f64) -> FluidConfig {
     use hisab::DVec3;
@@ -289,12 +423,28 @@ pub fn surface_water_config(width: f64, height: f64, smoothing_radius: f64) -> F
 }
 
 /// Create a water particle at the given 2D position for SPH simulation.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let p = water_particle(5.0, 3.0);
+/// assert!((p.position.x - 5.0).abs() < f64::EPSILON);
+/// ```
 #[must_use]
 pub fn water_particle(x: f64, y: f64) -> FluidParticle {
     FluidParticle::new_2d(x, y, 1.0)
 }
 
 /// Sediment transport regime based on the Hjulström curve.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let regime = transport_regime(0.001, 0.5);
+/// assert_eq!(regime, TransportRegime::Erosion);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportRegime {
     /// Velocity too low — sediment deposits on the bed.
@@ -312,6 +462,15 @@ pub enum TransportRegime {
 /// medium sand needs the least, coarse gravel needs high velocity again.
 ///
 /// - `grain_diameter_m`: grain diameter in metres
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sand = hjulstrom_erosion_velocity(0.0005);
+/// let clay = hjulstrom_erosion_velocity(0.00001);
+/// assert!(sand < clay);
+/// ```
 #[must_use]
 pub fn hjulstrom_erosion_velocity(grain_diameter_m: f64) -> f64 {
     let d = grain_diameter_m;
@@ -333,6 +492,15 @@ pub fn hjulstrom_erosion_velocity(grain_diameter_m: f64) -> f64 {
 /// Uses an empirical fit to the lower Hjulström curve.
 ///
 /// - `grain_diameter_m`: grain diameter in metres
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let fine = hjulstrom_deposition_velocity(0.0001);
+/// let coarse = hjulstrom_deposition_velocity(0.001);
+/// assert!(coarse > fine);
+/// ```
 #[must_use]
 pub fn hjulstrom_deposition_velocity(grain_diameter_m: f64) -> f64 {
     let d = grain_diameter_m;
@@ -347,6 +515,13 @@ pub fn hjulstrom_deposition_velocity(grain_diameter_m: f64) -> f64 {
 ///
 /// - `grain_diameter_m`: grain diameter in metres
 /// - `flow_velocity`: water velocity in m/s
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(transport_regime(0.001, 0.001), TransportRegime::Deposition);
+/// ```
 #[must_use]
 pub fn transport_regime(grain_diameter_m: f64, flow_velocity: f64) -> TransportRegime {
     let v_erosion = hjulstrom_erosion_velocity(grain_diameter_m);
@@ -370,6 +545,14 @@ pub fn transport_regime(grain_diameter_m: f64, flow_velocity: f64) -> TransportR
 /// - `fluid_density`: fluid density in kg/m³ (water: 1000)
 /// - `grain_diameter_m`: grain diameter in metres
 /// - `gravity`: gravitational acceleration (9.81 m/s²)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let theta = shields_parameter(5.0, 2650.0, 1000.0, 0.001, 9.81);
+/// assert!(theta > SHIELDS_CRITICAL);
+/// ```
 #[must_use]
 pub fn shields_parameter(
     shear_stress: f64,
@@ -382,9 +565,24 @@ pub fn shields_parameter(
 }
 
 /// Critical Shields parameter threshold for incipient motion (~0.047 for turbulent flow).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert!((SHIELDS_CRITICAL - 0.047).abs() < 1e-10);
+/// ```
 pub const SHIELDS_CRITICAL: f64 = 0.047;
 
 /// Check if a grain will be mobilised (Shields parameter > critical).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert!(is_grain_mobile(5.0, 2650.0, 1000.0, 0.001, 9.81));
+/// assert!(!is_grain_mobile(0.01, 2650.0, 1000.0, 0.01, 9.81));
+/// ```
 #[must_use]
 pub fn is_grain_mobile(
     shear_stress: f64,

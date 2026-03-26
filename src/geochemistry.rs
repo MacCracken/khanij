@@ -18,6 +18,19 @@ const MW_FEO: f64 = 71.844;
 // ---------------------------------------------------------------------------
 
 /// Major-element oxide analysis of a rock sample (weight-percent).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let ox = MajorOxides {
+///     sio2: 49.5, tio2: 1.5, al2o3: 15.5, fe2o3: 2.5,
+///     feo: 7.5, mno: 0.17, mgo: 8.0, cao: 11.0,
+///     na2o: 2.5, k2o: 0.5, p2o5: 0.2, h2o: 0.5,
+/// };
+/// assert!(ox.is_valid());
+/// assert_eq!(ox.tas_classification(), TasClassification::Basalt);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MajorOxides {
     pub sio2: f64,
@@ -36,6 +49,18 @@ pub struct MajorOxides {
 
 impl MajorOxides {
     /// Sum of all oxide weight-percent values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let ox = MajorOxides {
+    ///     sio2: 49.5, tio2: 1.5, al2o3: 15.5, fe2o3: 2.5,
+    ///     feo: 7.5, mno: 0.17, mgo: 8.0, cao: 11.0,
+    ///     na2o: 2.5, k2o: 0.5, p2o5: 0.2, h2o: 0.5,
+    /// };
+    /// assert!((ox.total() - 99.37).abs() < 0.01);
+    /// ```
     #[must_use]
     pub fn total(&self) -> f64 {
         self.sio2
@@ -53,6 +78,18 @@ impl MajorOxides {
     }
 
     /// Returns `true` when the oxide total is within 100 +/- 2 wt%.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let ox = MajorOxides {
+    ///     sio2: 49.5, tio2: 1.5, al2o3: 15.5, fe2o3: 2.5,
+    ///     feo: 7.5, mno: 0.17, mgo: 8.0, cao: 11.0,
+    ///     na2o: 2.5, k2o: 0.5, p2o5: 0.2, h2o: 0.5,
+    /// };
+    /// assert!(ox.is_valid());
+    /// ```
     #[must_use]
     pub fn is_valid(&self) -> bool {
         let t = self.total();
@@ -60,24 +97,74 @@ impl MajorOxides {
     }
 
     /// Total alkali content (Na2O + K2O) for TAS classification.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let ox = MajorOxides {
+    ///     sio2: 49.5, tio2: 1.5, al2o3: 15.5, fe2o3: 2.5,
+    ///     feo: 7.5, mno: 0.17, mgo: 8.0, cao: 11.0,
+    ///     na2o: 2.5, k2o: 0.5, p2o5: 0.2, h2o: 0.5,
+    /// };
+    /// assert!((ox.total_alkali() - 3.0).abs() < 1e-10);
+    /// ```
     #[must_use]
     pub fn total_alkali(&self) -> f64 {
         self.na2o + self.k2o
     }
 
     /// Classify this analysis on the Total Alkali-Silica diagram.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let ox = MajorOxides {
+    ///     sio2: 73.0, tio2: 0.2, al2o3: 13.5, fe2o3: 0.8,
+    ///     feo: 1.0, mno: 0.05, mgo: 0.3, cao: 1.2,
+    ///     na2o: 3.5, k2o: 5.0, p2o5: 0.05, h2o: 0.5,
+    /// };
+    /// assert_eq!(ox.tas_classification(), TasClassification::Rhyolite);
+    /// ```
     #[must_use]
     pub fn tas_classification(&self) -> TasClassification {
         classify_tas(self.sio2, self.total_alkali())
     }
 
     /// Mg-number computed from FeO and MgO of this analysis.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let ox = MajorOxides {
+    ///     sio2: 49.5, tio2: 1.5, al2o3: 15.5, fe2o3: 2.5,
+    ///     feo: 7.5, mno: 0.17, mgo: 8.0, cao: 11.0,
+    ///     na2o: 2.5, k2o: 0.5, p2o5: 0.2, h2o: 0.5,
+    /// };
+    /// let mg = ox.mg_number();
+    /// assert!(mg > 0.5 && mg < 0.8);
+    /// ```
     #[must_use]
     pub fn mg_number(&self) -> f64 {
         mg_number(self.feo, self.mgo)
     }
 
     /// Alumina saturation index for this analysis.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let ox = MajorOxides {
+    ///     sio2: 73.0, tio2: 0.2, al2o3: 13.5, fe2o3: 0.8,
+    ///     feo: 1.0, mno: 0.05, mgo: 0.3, cao: 1.2,
+    ///     na2o: 3.5, k2o: 5.0, p2o5: 0.05, h2o: 0.5,
+    /// };
+    /// let asi = ox.asi();
+    /// assert!(asi > 0.0);
+    /// ```
     #[must_use]
     pub fn asi(&self) -> f64 {
         alumina_saturation_index(self.al2o3, self.cao, self.na2o, self.k2o)
@@ -90,6 +177,14 @@ impl MajorOxides {
 
 /// Rock classification on the Total Alkali-Silica (TAS) diagram
 /// (Le Bas et al., 1986).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cls = classify_tas(50.0, 3.0);
+/// assert_eq!(cls, TasClassification::Basalt);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum TasClassification {
@@ -114,8 +209,17 @@ pub enum TasClassification {
 /// Classify a volcanic rock on the Total Alkali-Silica diagram using
 /// simplified field boundaries after Le Bas et al. (1986).
 ///
-/// * `sio2` — SiO2 in weight-percent
-/// * `total_alkali` — Na2O + K2O in weight-percent
+/// * `sio2` -- SiO2 in weight-percent
+/// * `total_alkali` -- Na2O + K2O in weight-percent
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_tas(50.0, 3.0), TasClassification::Basalt);
+/// assert_eq!(classify_tas(73.0, 8.5), TasClassification::Rhyolite);
+/// assert_eq!(classify_tas(58.0, 4.0), TasClassification::Andesite);
+/// ```
 #[must_use]
 pub fn classify_tas(sio2: f64, total_alkali: f64) -> TasClassification {
     // Ultra-alkaline / foidite field
@@ -211,12 +315,21 @@ pub fn classify_tas(sio2: f64, total_alkali: f64) -> TasClassification {
 // Mg-number
 // ---------------------------------------------------------------------------
 
-/// Mg-number (Mg#) — molar MgO / (MgO + FeO).
+/// Mg-number (Mg#) -- molar MgO / (MgO + FeO).
 ///
 /// A high Mg# (~0.7-0.8) indicates primitive, undifferentiated magma;
 /// lower values indicate more evolved compositions.
 ///
 /// Returns 0.0 when both `feo` and `mgo` are zero.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mg = mg_number(7.5, 8.0);
+/// assert!(mg > 0.5 && mg < 0.8);
+/// assert_eq!(mg_number(0.0, 0.0), 0.0);
+/// ```
 #[must_use]
 pub fn mg_number(feo: f64, mgo: f64) -> f64 {
     let mgo_mol = mgo / MW_MGO;
@@ -235,10 +348,18 @@ pub fn mg_number(feo: f64, mgo: f64) -> f64 {
 /// Alumina Saturation Index (ASI) = Al2O3 / (CaO + Na2O + K2O) in molar
 /// proportions (Shand, 1943).
 ///
-/// * ASI > 1  — peraluminous
-/// * ASI < 1  — metaluminous (or peralkaline when Na+K > Al)
+/// * ASI > 1 -- peraluminous
+/// * ASI < 1 -- metaluminous (or peralkaline when Na+K > Al)
 ///
 /// Returns `f64::INFINITY` when the denominator is zero.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let asi = alumina_saturation_index(16.0, 1.0, 3.0, 4.0);
+/// assert!(asi > 1.0); // peraluminous
+/// ```
 #[must_use]
 pub fn alumina_saturation_index(al2o3: f64, cao: f64, na2o: f64, k2o: f64) -> f64 {
     let al_mol = al2o3 / MW_AL2O3;
@@ -254,6 +375,14 @@ pub fn alumina_saturation_index(al2o3: f64, cao: f64, na2o: f64, k2o: f64) -> f6
 // ---------------------------------------------------------------------------
 
 /// Alumina saturation classification (Shand, 1943).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_asi(1.5), AsiClassification::Peraluminous);
+/// assert_eq!(classify_asi(0.8), AsiClassification::Metaluminous);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum AsiClassification {
@@ -264,9 +393,18 @@ pub enum AsiClassification {
 
 /// Classify a rock by its Alumina Saturation Index.
 ///
-/// * ASI > 1.0 — `Peraluminous`
-/// * 0.5 <= ASI <= 1.0 — `Metaluminous`
-/// * ASI < 0.5 — `Peralkaline`
+/// * ASI > 1.0 -- `Peraluminous`
+/// * 0.5 <= ASI <= 1.0 -- `Metaluminous`
+/// * ASI < 0.5 -- `Peralkaline`
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_asi(1.5), AsiClassification::Peraluminous);
+/// assert_eq!(classify_asi(0.8), AsiClassification::Metaluminous);
+/// assert_eq!(classify_asi(0.3), AsiClassification::Peralkaline);
+/// ```
 #[must_use]
 pub fn classify_asi(asi: f64) -> AsiClassification {
     if asi > 1.0 {
@@ -284,15 +422,27 @@ pub fn classify_asi(asi: f64) -> AsiClassification {
 
 /// Rayleigh fractional crystallization: C_l = C_0 * F^(D - 1).
 ///
-/// * `c0` — initial concentration of element in the melt
-/// * `f_remaining` — fraction of melt remaining (0 < F <= 1)
-/// * `partition_coeff` — bulk partition coefficient D
+/// * `c0` -- initial concentration of element in the melt
+/// * `f_remaining` -- fraction of melt remaining (0 < F <= 1)
+/// * `partition_coeff` -- bulk partition coefficient D
 ///
 /// Returns the concentration of the element in the remaining liquid.
 ///
 /// # Panics
 ///
 /// Panics if `f_remaining` is not in (0, 1].
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// // Incompatible element (D < 1) enriches in melt
+/// let c = fractional_crystallization(100.0, 0.5, 0.1);
+/// assert!(c > 100.0);
+/// // No crystallization => unchanged
+/// let c2 = fractional_crystallization(42.0, 1.0, 3.0);
+/// assert!((c2 - 42.0).abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn fractional_crystallization(c0: f64, f_remaining: f64, partition_coeff: f64) -> f64 {
     assert!(

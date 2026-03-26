@@ -4,6 +4,18 @@
 use serde::{Deserialize, Serialize};
 
 /// A sediment source: where sediment is produced.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let src = SedimentSource {
+///     name: "Hillslope".into(),
+///     production_rate: 500.0,
+///     grain_fractions: [0.2, 0.3, 0.3, 0.15, 0.05],
+/// };
+/// assert_eq!(src.name, "Hillslope");
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SedimentSource {
     /// Name/label for this source.
@@ -16,6 +28,18 @@ pub struct SedimentSource {
 }
 
 /// A sediment sink: where sediment accumulates.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sink = SedimentSink {
+///     name: "Floodplain".into(),
+///     capacity: 600.0,
+///     accumulated: 0.0,
+/// };
+/// assert_eq!(sink.capacity, 600.0);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SedimentSink {
     pub name: String,
@@ -26,6 +50,24 @@ pub struct SedimentSink {
 }
 
 /// Sediment budget result for a time step.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sources = vec![SedimentSource {
+///     name: "Hillslope".into(),
+///     production_rate: 1000.0,
+///     grain_fractions: [0.2, 0.3, 0.3, 0.15, 0.05],
+/// }];
+/// let sinks = vec![SedimentSink {
+///     name: "Floodplain".into(),
+///     capacity: 600.0,
+///     accumulated: 0.0,
+/// }];
+/// let result = compute_budget(&sources, 1500.0, &sinks);
+/// assert!((result.total_production - 1000.0).abs() < 0.01);
+/// ```
 #[derive(Debug, Clone)]
 pub struct BudgetResult {
     /// Total sediment produced (tonnes).
@@ -39,9 +81,25 @@ pub struct BudgetResult {
 }
 
 /// Grain size class names for reference.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::sediment::GRAIN_CLASSES;
+/// assert_eq!(GRAIN_CLASSES[0], "clay");
+/// assert_eq!(GRAIN_CLASSES.len(), 5);
+/// ```
 pub const GRAIN_CLASSES: [&str; 5] = ["clay", "silt", "fine_sand", "coarse_sand", "gravel"];
 
 /// Representative grain diameters (metres) for each size class.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::sediment::GRAIN_DIAMETERS;
+/// assert!(GRAIN_DIAMETERS[4] > GRAIN_DIAMETERS[0]);
+/// assert_eq!(GRAIN_DIAMETERS.len(), 5);
+/// ```
 pub const GRAIN_DIAMETERS: [f64; 5] = [0.000_005, 0.000_03, 0.000_2, 0.001, 0.01];
 
 /// Compute sediment production from weathering rate and area.
@@ -53,6 +111,14 @@ pub const GRAIN_DIAMETERS: [f64; 5] = [0.000_005, 0.000_03, 0.000_2, 0.001, 0.01
 /// - `depth_m_per_year`: average weathering depth per year in metres
 ///
 /// Returns sediment production in tonnes/year.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let prod = sediment_production(0.5, 2700.0, 1e6, 0.001);
+/// assert!(prod > 0.0);
+/// ```
 #[must_use]
 pub fn sediment_production(
     weathering_rate: f64,
@@ -74,6 +140,14 @@ pub fn sediment_production(
 /// - `b`: slope exponent (typical: 1.0)
 ///
 /// Returns transport capacity in tonnes/year.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cap = transport_capacity(10.0, 0.01, 0.005, 1.5, 1.0);
+/// assert!(cap > 0.0);
+/// ```
 #[must_use]
 pub fn transport_capacity(discharge_m3_s: f64, slope: f64, k: f64, a: f64, b: f64) -> f64 {
     let rate_kg_s = k * discharge_m3_s.powf(a) * slope.powf(b);
@@ -87,6 +161,24 @@ pub fn transport_capacity(discharge_m3_s: f64, slope: f64, k: f64, a: f64, b: f6
 /// - `sinks`: deposition sinks with capacities
 ///
 /// Returns the budget breakdown.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sources = vec![SedimentSource {
+///     name: "Hillslope".into(),
+///     production_rate: 1000.0,
+///     grain_fractions: [0.2, 0.3, 0.3, 0.15, 0.05],
+/// }];
+/// let sinks = vec![SedimentSink {
+///     name: "Basin".into(),
+///     capacity: 600.0,
+///     accumulated: 0.0,
+/// }];
+/// let budget = compute_budget(&sources, 1500.0, &sinks);
+/// assert!((budget.total_deposition - 600.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn compute_budget(
     sources: &[SedimentSource],
@@ -116,6 +208,15 @@ pub fn compute_budget(
 /// - `catchment_area_km2`: catchment area in km²
 ///
 /// Returns SDR as a fraction (0.0-1.0).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let small = sediment_delivery_ratio(1.0);
+/// let large = sediment_delivery_ratio(1000.0);
+/// assert!(small > large);
+/// ```
 #[must_use]
 pub fn sediment_delivery_ratio(catchment_area_km2: f64) -> f64 {
     if catchment_area_km2 <= 0.0 {
@@ -131,6 +232,14 @@ pub fn sediment_delivery_ratio(catchment_area_km2: f64) -> f64 {
 /// - `rock_density`: kg/m³
 ///
 /// Returns denudation rate in mm/year.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let d = denudation_rate(10_000.0, 1e9, 2700.0);
+/// assert!(d > 0.0);
+/// ```
 #[must_use]
 pub fn denudation_rate(
     sediment_export_tonnes_yr: f64,

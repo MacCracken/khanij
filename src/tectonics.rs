@@ -4,6 +4,14 @@
 use serde::{Deserialize, Serialize};
 
 /// Plate boundary type.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let bt = BoundaryType::Divergent;
+/// assert_eq!(bt, BoundaryType::Divergent);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum BoundaryType {
@@ -19,6 +27,19 @@ pub enum BoundaryType {
 ///
 /// All plate motions on a sphere can be described as rotations about an
 /// Euler pole at (latitude, longitude) with an angular velocity ω.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let pole = EulerPole {
+///     latitude_deg: 0.0,
+///     longitude_deg: 0.0,
+///     omega_deg_per_myr: 1.0,
+/// };
+/// let v = pole.velocity_mm_yr(90.0);
+/// assert!(v > 100.0 && v < 120.0);
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct EulerPole {
     /// Latitude of the pole in degrees (-90 to 90).
@@ -37,6 +58,19 @@ impl EulerPole {
     /// - `angular_distance_deg`: angle between the Euler pole and the point
     ///
     /// Returns velocity in mm/yr.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let pole = EulerPole {
+    ///     latitude_deg: 0.0,
+    ///     longitude_deg: 0.0,
+    ///     omega_deg_per_myr: 1.0,
+    /// };
+    /// let v = pole.velocity_mm_yr(0.0);
+    /// assert!(v.abs() < 0.01);
+    /// ```
     #[must_use]
     pub fn velocity_mm_yr(&self, angular_distance_deg: f64) -> f64 {
         let earth_radius_km = 6371.0;
@@ -47,6 +81,18 @@ impl EulerPole {
     }
 
     /// Maximum velocity (at 90° from the pole).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let pole = EulerPole {
+    ///     latitude_deg: 0.0,
+    ///     longitude_deg: 0.0,
+    ///     omega_deg_per_myr: 1.0,
+    /// };
+    /// assert!(pole.max_velocity_mm_yr() > 100.0);
+    /// ```
     #[must_use]
     pub fn max_velocity_mm_yr(&self) -> f64 {
         self.velocity_mm_yr(90.0)
@@ -58,12 +104,28 @@ impl EulerPole {
 /// - `half_rate_mm_yr`: half-spreading rate in mm/yr
 ///
 /// Returns full spreading rate in mm/yr.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let full = full_spreading_rate(12.0);
+/// assert!((full - 24.0).abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn full_spreading_rate(half_rate_mm_yr: f64) -> f64 {
     2.0 * half_rate_mm_yr
 }
 
 /// Ridge classification by spreading rate.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let rt = classify_ridge(30.0);
+/// assert_eq!(rt, RidgeType::Slow);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum RidgeType {
@@ -80,6 +142,14 @@ pub enum RidgeType {
 }
 
 /// Classify a mid-ocean ridge by its full spreading rate.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_ridge(10.0), RidgeType::UltraSlow);
+/// assert_eq!(classify_ridge(100.0), RidgeType::Fast);
+/// ```
 #[must_use]
 pub fn classify_ridge(full_rate_mm_yr: f64) -> RidgeType {
     if full_rate_mm_yr < 20.0 {
@@ -96,6 +166,19 @@ pub fn classify_ridge(full_rate_mm_yr: f64) -> RidgeType {
 }
 
 /// Subduction zone geometry.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sz = SubductionZone {
+///     dip_deg: 45.0,
+///     convergence_rate_mm_yr: 80.0,
+///     plate_age_ma: 100.0,
+/// };
+/// let depth = sz.slab_depth_km(100.0);
+/// assert!((depth - 100.0).abs() < 0.1);
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SubductionZone {
     /// Dip angle of the slab in degrees.
@@ -112,6 +195,19 @@ impl SubductionZone {
     /// depth = distance × tan(dip)
     ///
     /// Returns depth in km.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let sz = SubductionZone {
+    ///     dip_deg: 45.0,
+    ///     convergence_rate_mm_yr: 80.0,
+    ///     plate_age_ma: 100.0,
+    /// };
+    /// let deep = sz.slab_depth_km(200.0);
+    /// assert!(deep > sz.slab_depth_km(50.0));
+    /// ```
     #[must_use]
     pub fn slab_depth_km(&self, distance_from_trench_km: f64) -> f64 {
         distance_from_trench_km * self.dip_deg.to_radians().tan()
@@ -120,6 +216,14 @@ impl SubductionZone {
     /// Estimated slab dip from plate age (older plates dip steeper).
     ///
     /// Empirical: dip ≈ 30° + 0.3 × age_Ma (capped at 80°).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let dip = SubductionZone::estimated_dip_from_age(100.0);
+    /// assert!((dip - 60.0).abs() < 0.01);
+    /// ```
     #[must_use]
     pub fn estimated_dip_from_age(plate_age_ma: f64) -> f64 {
         (30.0 + 0.3 * plate_age_ma).min(80.0)
@@ -134,6 +238,14 @@ impl SubductionZone {
 /// - `half_rate_mm_yr`: half-spreading rate in mm/yr
 ///
 /// Returns age in Ma.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let age = ocean_floor_age(500.0, 25.0);
+/// assert!((age - 20.0).abs() < 0.1);
+/// ```
 #[must_use]
 pub fn ocean_floor_age(distance_km: f64, half_rate_mm_yr: f64) -> f64 {
     if half_rate_mm_yr <= 0.0 {
@@ -149,6 +261,14 @@ pub fn ocean_floor_age(distance_km: f64, half_rate_mm_yr: f64) -> f64 {
 /// h ≈ 10 × √(age_Ma) km (Parsons & Sclater, 1977)
 ///
 /// Returns thickness in km.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let h = lithosphere_thickness(100.0);
+/// assert!((h - 100.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn lithosphere_thickness(age_ma: f64) -> f64 {
     if age_ma <= 0.0 {
@@ -162,6 +282,14 @@ pub fn lithosphere_thickness(age_ma: f64) -> f64 {
 /// d ≈ 2500 + 350 × √(age_Ma) metres (Parsons & Sclater, 1977)
 ///
 /// Returns depth in metres.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let depth = ocean_depth_m(0.0);
+/// assert!((depth - 2500.0).abs() < 1.0);
+/// ```
 #[must_use]
 pub fn ocean_depth_m(age_ma: f64) -> f64 {
     if age_ma <= 0.0 {

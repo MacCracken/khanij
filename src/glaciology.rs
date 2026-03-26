@@ -40,6 +40,14 @@ const DOUBLING_INTERVAL: f64 = 10.0;
 // ---------------------------------------------------------------------------
 
 /// Classification of glacier morphology.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let gt = GlacierType::Alpine;
+/// assert_eq!(gt, GlacierType::Alpine);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum GlacierType {
@@ -83,6 +91,15 @@ fn flow_parameter_a(temperature_c: f64) -> f64 {
 /// # Returns
 ///
 /// Strain rate in s⁻¹.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let low = glen_flow_law(1e5, -10.0, 3.0);
+/// let high = glen_flow_law(2e5, -10.0, 3.0);
+/// assert!(high > low);
+/// ```
 #[must_use]
 pub fn glen_flow_law(stress_pa: f64, temperature_c: f64, n: f64) -> f64 {
     let a = flow_parameter_a(temperature_c);
@@ -108,6 +125,14 @@ pub fn glen_flow_law(stress_pa: f64, temperature_c: f64, n: f64) -> f64 {
 /// # Returns
 ///
 /// Sliding velocity in m/s.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let v = basal_sliding_velocity(1e5, 1e6);
+/// assert!(v > 0.0);
+/// ```
 #[must_use]
 pub fn basal_sliding_velocity(basal_shear_stress: f64, effective_pressure: f64) -> f64 {
     const K: f64 = 1e-15;
@@ -132,6 +157,14 @@ pub fn basal_sliding_velocity(basal_shear_stress: f64, effective_pressure: f64) 
 /// # Returns
 ///
 /// Mass balance in m/yr water equivalent.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let b = mass_balance(2.0, 1.5);
+/// assert!((b - 0.5).abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn mass_balance(accumulation_m_yr: f64, ablation_m_yr: f64) -> f64 {
     accumulation_m_yr - ablation_m_yr
@@ -151,6 +184,14 @@ pub fn mass_balance(accumulation_m_yr: f64, ablation_m_yr: f64) -> f64 {
 /// # Returns
 ///
 /// Altitude in metres.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let ela = equilibrium_line_altitude(4000.0, 2000.0);
+/// assert!((ela - 3000.0).abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn equilibrium_line_altitude(summit_m: f64, terminus_m: f64) -> f64 {
     (summit_m + terminus_m) / 2.0
@@ -167,6 +208,14 @@ pub fn equilibrium_line_altitude(summit_m: f64, terminus_m: f64) -> f64 {
 /// # Returns
 ///
 /// Depression in metres.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let d = isostatic_depression(3000.0);
+/// assert!((d - 3000.0 * 917.0 / 3300.0).abs() < 1e-6);
+/// ```
 #[must_use]
 pub fn isostatic_depression(ice_thickness_m: f64) -> f64 {
     ice_thickness_m * (RHO_ICE / RHO_MANTLE)
@@ -191,6 +240,14 @@ pub fn isostatic_depression(ice_thickness_m: f64) -> f64 {
 /// # Returns
 ///
 /// Relaxation time in years.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let t = isostatic_rebound_time(100.0, 1e21);
+/// assert!(t > 0.0);
+/// ```
 #[must_use]
 pub fn isostatic_rebound_time(_depression_m: f64, viscosity_pa_s: f64) -> f64 {
     let tau_seconds = viscosity_pa_s / (RHO_MANTLE * G * 100.0);
@@ -217,6 +274,14 @@ pub fn isostatic_rebound_time(_depression_m: f64, viscosity_pa_s: f64) -> f64 {
 /// # Returns
 ///
 /// Depth-integrated surface velocity in m/yr.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let v = ice_velocity_depth_integrated(0.05, 500.0, -10.0);
+/// assert!(v > 0.0);
+/// ```
 #[must_use]
 pub fn ice_velocity_depth_integrated(
     surface_slope: f64,

@@ -1,6 +1,15 @@
 use serde::{Deserialize, Serialize};
 
 /// Rock classification by formation process.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let rock_type = RockType::Igneous;
+/// assert_eq!(rock_type, RockType::Igneous);
+/// assert_ne!(rock_type, RockType::Sedimentary);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum RockType {
@@ -10,6 +19,14 @@ pub enum RockType {
 }
 
 /// Geological process that drives rock cycle transitions.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let process = GeologicalProcess::Weathering;
+/// assert_eq!(process, GeologicalProcess::Weathering);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum GeologicalProcess {
@@ -19,6 +36,15 @@ pub enum GeologicalProcess {
 }
 
 /// A rock with composition and properties.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let rock = Rock::granite();
+/// assert_eq!(rock.rock_type, RockType::Igneous);
+/// assert!(rock.density > 0.0);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rock {
     pub name: String,
@@ -31,6 +57,24 @@ pub struct Rock {
 impl Rock {
     /// Create a new rock with validated density and porosity.
     /// Returns `None` if density is not positive or porosity is not in `[0.0, 1.0]`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let rock = Rock::new(
+    ///     "Sandstone",
+    ///     RockType::Sedimentary,
+    ///     2.3,
+    ///     0.15,
+    ///     vec!["Quartz".into()],
+    /// );
+    /// assert!(rock.is_some());
+    ///
+    /// // Invalid density is rejected
+    /// let bad = Rock::new("Bad", RockType::Igneous, -1.0, 0.5, vec![]);
+    /// assert!(bad.is_none());
+    /// ```
     #[must_use]
     pub fn new(
         name: impl Into<String>,
@@ -51,6 +95,16 @@ impl Rock {
         })
     }
 
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let granite = Rock::granite();
+    /// assert_eq!(granite.name, "Granite");
+    /// assert_eq!(granite.rock_type, RockType::Igneous);
+    /// assert!((granite.density - 2.7).abs() < 0.01);
+    /// assert!(granite.primary_minerals.contains(&"Quartz".to_string()));
+    /// ```
     #[must_use]
     pub fn granite() -> Self {
         Self {
@@ -192,6 +246,15 @@ impl Rock {
 /// - `fluid_density`: pore fluid density in g/cm³ (water: 1.0, air: 0.001)
 ///
 /// Returns bulk density in g/cm³.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// // Water-saturated sandstone: grain density 2.65, 15% porosity
+/// let bd = bulk_density(2.65, 0.15, 1.0);
+/// assert!((bd - 2.4025).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn bulk_density(grain_density: f32, porosity: f32, fluid_density: f32) -> f32 {
     grain_density * (1.0 - porosity) + fluid_density * porosity
@@ -205,6 +268,16 @@ pub fn bulk_density(grain_density: f32, porosity: f32, fluid_density: f32) -> f3
 /// - `fluid_density`: pore fluid density in g/cm³
 ///
 /// Returns bulk density in g/cm³.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// // Granite-like mix: quartz 30%, feldspar 60%, mica 10%
+/// let minerals = [(2.65, 0.30), (2.56, 0.60), (2.82, 0.10)];
+/// let bd = bulk_density_from_minerals(&minerals, 0.01, 1.0);
+/// assert!(bd > 2.5 && bd < 2.7);
+/// ```
 #[must_use]
 pub fn bulk_density_from_minerals(
     minerals: &[(f32, f32)],
@@ -218,6 +291,15 @@ pub fn bulk_density_from_minerals(
 /// Porosity from bulk and grain density (assuming air-filled pores).
 ///
 /// φ = 1 - ρ_bulk / ρ_grain
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// // Sandstone with bulk density 2.25 and grain density 2.65
+/// let porosity = porosity_from_density(2.25, 2.65);
+/// assert!((porosity - 0.151).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn porosity_from_density(bulk_density: f32, grain_density: f32) -> f32 {
     if grain_density <= 0.0 {
@@ -227,6 +309,21 @@ pub fn porosity_from_density(bulk_density: f32, grain_density: f32) -> f32 {
 }
 
 /// Rock cycle transition using a typed geological process.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// // Full rock cycle: Igneous -> Sedimentary -> Metamorphic -> Igneous
+/// let sed = rock_cycle_next(RockType::Igneous, GeologicalProcess::Weathering).unwrap();
+/// assert_eq!(sed, RockType::Sedimentary);
+///
+/// let meta = rock_cycle_next(sed, GeologicalProcess::Metamorphism).unwrap();
+/// assert_eq!(meta, RockType::Metamorphic);
+///
+/// let igneous = rock_cycle_next(meta, GeologicalProcess::Melting).unwrap();
+/// assert_eq!(igneous, RockType::Igneous);
+/// ```
 #[must_use]
 pub fn rock_cycle_next(rock_type: RockType, process: GeologicalProcess) -> Option<RockType> {
     match (rock_type, process) {

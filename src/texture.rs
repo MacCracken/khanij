@@ -8,6 +8,15 @@ use serde::{Deserialize, Serialize};
 // ---------------------------------------------------------------------------
 
 /// Wentworth grain size class.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let gs = classify_grain_size(0.3);
+/// assert_eq!(gs, GrainSize::MediumSand);
+/// assert!(GrainSize::Clay < GrainSize::Boulder);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum GrainSize {
@@ -26,6 +35,15 @@ pub enum GrainSize {
 
 impl GrainSize {
     /// Size range in mm: (min, max).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let (lo, hi) = GrainSize::MediumSand.range_mm();
+    /// assert!((lo - 0.25).abs() < 1e-6);
+    /// assert!((hi - 0.5).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn range_mm(&self) -> (f64, f64) {
         match self {
@@ -45,6 +63,14 @@ impl GrainSize {
 
     /// Phi scale value (φ = -log₂(d_mm)).
     /// Returns the phi value at the boundary between this and the next smaller class.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let phi = GrainSize::CoarseSand.phi();
+    /// assert!((phi - 0.0).abs() < 1e-6); // 1 mm boundary => phi 0
+    /// ```
     #[must_use]
     pub fn phi(&self) -> f64 {
         let (_, max) = self.range_mm();
@@ -57,6 +83,15 @@ impl GrainSize {
 }
 
 /// Classify grain diameter (in mm) into Wentworth size class.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_grain_size(0.001), GrainSize::Clay);
+/// assert_eq!(classify_grain_size(0.3), GrainSize::MediumSand);
+/// assert_eq!(classify_grain_size(500.0), GrainSize::Boulder);
+/// ```
 #[must_use]
 pub fn classify_grain_size(diameter_mm: f64) -> GrainSize {
     if diameter_mm < 0.004 {
@@ -87,6 +122,14 @@ pub fn classify_grain_size(diameter_mm: f64) -> GrainSize {
 /// Convert phi scale to grain diameter in mm.
 ///
 /// d = 2^(-φ)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let d = phi_to_mm(0.0);
+/// assert!((d - 1.0).abs() < 1e-10); // phi 0 => 1 mm
+/// ```
 #[must_use]
 pub fn phi_to_mm(phi: f64) -> f64 {
     2.0_f64.powf(-phi)
@@ -95,6 +138,14 @@ pub fn phi_to_mm(phi: f64) -> f64 {
 /// Convert grain diameter in mm to phi scale.
 ///
 /// φ = -log₂(d)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let phi = mm_to_phi(1.0);
+/// assert!((phi - 0.0).abs() < 1e-10); // 1 mm => phi 0
+/// ```
 #[must_use]
 pub fn mm_to_phi(diameter_mm: f64) -> f64 {
     -(diameter_mm.log2())
@@ -105,6 +156,14 @@ pub fn mm_to_phi(diameter_mm: f64) -> f64 {
 // ---------------------------------------------------------------------------
 
 /// Sorting classification (Folk & Ward, 1957).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let s = classify_sorting(0.2);
+/// assert_eq!(s, Sorting::VeryWellSorted);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Sorting {
@@ -118,6 +177,14 @@ pub enum Sorting {
 }
 
 /// Classify sorting from standard deviation in phi units.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_sorting(0.4), Sorting::WellSorted);
+/// assert_eq!(classify_sorting(1.5), Sorting::PoorlySorted);
+/// ```
 #[must_use]
 pub fn classify_sorting(std_dev_phi: f64) -> Sorting {
     if std_dev_phi < 0.35 {
@@ -142,6 +209,13 @@ pub fn classify_sorting(std_dev_phi: f64) -> Sorting {
 // ---------------------------------------------------------------------------
 
 /// Grain roundness (Powers, 1953).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert!(Roundness::VeryAngular < Roundness::WellRounded);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Roundness {
@@ -158,6 +232,14 @@ pub enum Roundness {
 // ---------------------------------------------------------------------------
 
 /// Igneous rock texture classification.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let t = classify_igneous_texture(3.0, false, false);
+/// assert_eq!(t, IgneousTexture::Phaneritic);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum IgneousTexture {
@@ -182,6 +264,14 @@ pub enum IgneousTexture {
 /// - `avg_grain_size_mm`: average crystal size in mm
 /// - `has_phenocrysts`: whether large crystals exist in a finer matrix
 /// - `is_glassy`: whether the rock is glassy (no crystals)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_igneous_texture(0.0, false, true), IgneousTexture::Glassy);
+/// assert_eq!(classify_igneous_texture(50.0, false, false), IgneousTexture::Pegmatitic);
+/// ```
 #[must_use]
 pub fn classify_igneous_texture(
     avg_grain_size_mm: f64,
@@ -206,6 +296,14 @@ pub fn classify_igneous_texture(
 // ---------------------------------------------------------------------------
 
 /// Metamorphic fabric type.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let fabric = MetamorphicFabric::Foliated;
+/// assert_eq!(fabric, MetamorphicFabric::Foliated);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum MetamorphicFabric {

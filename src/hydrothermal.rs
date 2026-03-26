@@ -4,6 +4,19 @@
 //! Requires the `thermodynamics`, `fluids`, and `chemistry` features.
 
 /// Temperature-pressure conditions at a point in a hydrothermal system.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cond = HydrothermalConditions {
+///     temperature_k: 573.15,
+///     pressure_pa: 1e8,
+///     distance_m: 50.0,
+///     flow_rate: 1e-4,
+/// };
+/// assert!((cond.temperature_k - 573.15).abs() < 1e-10);
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct HydrothermalConditions {
     /// Temperature in kelvin.
@@ -17,6 +30,14 @@ pub struct HydrothermalConditions {
 }
 
 /// Hydrothermal alteration zone classification.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let zone = classify_alteration(400.0);
+/// assert_eq!(zone, AlterationZone::Phyllic);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlterationZone {
     /// > 500°C — potassic alteration (K-feldspar, biotite).
@@ -32,6 +53,14 @@ pub enum AlterationZone {
 }
 
 /// Classify the hydrothermal alteration zone from temperature.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(classify_alteration(600.0), AlterationZone::Potassic);
+/// assert_eq!(classify_alteration(100.0), AlterationZone::Unaltered);
+/// ```
 #[must_use]
 pub fn classify_alteration(temperature_c: f64) -> AlterationZone {
     if temperature_c > 500.0 {
@@ -55,6 +84,16 @@ pub fn classify_alteration(temperature_c: f64) -> AlterationZone {
 /// - `temperature_c`: fluid temperature in °C
 /// - `precipitation_temp_c`: temperature at which the metal precipitates
 ///   (e.g., gold ~300°C, copper ~350°C, lead ~200°C)
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let hot = metal_solubility(500.0, 300.0);
+/// let cold = metal_solubility(200.0, 300.0);
+/// assert!(hot > 0.0);
+/// assert!(cold.abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn metal_solubility(temperature_c: f64, precipitation_temp_c: f64) -> f64 {
     if temperature_c <= precipitation_temp_c {
@@ -74,6 +113,14 @@ pub fn metal_solubility(temperature_c: f64, precipitation_temp_c: f64) -> f64 {
 /// and falls off above and below.
 ///
 /// Returns a relative precipitation rate (0.0-1.0).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let at_target = precipitation_rate(300.0, 300.0);
+/// assert!((at_target - 1.0).abs() < 0.01);
+/// ```
 #[must_use]
 pub fn precipitation_rate(temperature_c: f64, precipitation_temp_c: f64) -> f64 {
     // Gaussian-like peak at the precipitation temperature, σ ≈ 30°C
@@ -95,6 +142,14 @@ pub fn precipitation_rate(temperature_c: f64, precipitation_temp_c: f64) -> f64 
 /// - `background_grade`: regional background grade (fraction)
 ///
 /// Returns estimated ore grade (fraction).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let grade = estimated_ore_grade(1e-6, 300.0, 300.0, 0.1, 0.001);
+/// assert!(grade > 0.001);
+/// ```
 #[must_use]
 pub fn estimated_ore_grade(
     fluid_flux: f64,

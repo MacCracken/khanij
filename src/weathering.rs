@@ -4,6 +4,14 @@ use serde::{Deserialize, Serialize};
 
 /// Rate of physical weathering (relative scale 0-1).
 /// Uses numerical integration over a temperature-moisture interaction model.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let rate = physical_weathering_rate(20.0, 0.5);
+/// assert!(rate > 0.0 && rate <= 1.0);
+/// ```
 #[must_use]
 pub fn physical_weathering_rate(temp_range_celsius: f32, moisture_fraction: f32) -> f32 {
     let tr = temp_range_celsius as f64;
@@ -21,6 +29,14 @@ pub fn physical_weathering_rate(temp_range_celsius: f32, moisture_fraction: f32)
 
 /// Rate of chemical weathering. Uses Arrhenius-style exponential temperature
 /// dependence combined with rainfall, computed via hisab calculus.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let rate = chemical_weathering_rate(25.0, 1500.0);
+/// assert!(rate > 0.0 && rate <= 1.0);
+/// ```
 #[must_use]
 pub fn chemical_weathering_rate(mean_temp_celsius: f32, annual_rainfall_mm: f32) -> f32 {
     let temp = mean_temp_celsius as f64;
@@ -42,6 +58,15 @@ pub fn chemical_weathering_rate(mean_temp_celsius: f32, annual_rainfall_mm: f32)
 
 /// Erosion rate estimate (Revised Universal Soil Loss Equation, improved).
 /// Uses hisab lerp for smooth interpolation of cover factor.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let bare = erosion_rate(50.0, 15.0, 0.0);
+/// let covered = erosion_rate(50.0, 15.0, 0.9);
+/// assert!(covered < bare);
+/// ```
 #[must_use]
 pub fn erosion_rate(rainfall_intensity: f32, slope_degrees: f32, vegetation_cover: f32) -> f32 {
     let slope_rad = (slope_degrees as f64).to_radians();

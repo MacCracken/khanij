@@ -1,6 +1,18 @@
 use serde::{Deserialize, Serialize};
 
 /// A geologic unit representing a distinct rock body.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let unit = GeologicUnit {
+///     name: "Basalt".into(),
+///     rock_type: "igneous".into(),
+///     age_ma: 65.0,
+/// };
+/// assert_eq!(unit.name, "Basalt");
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GeologicUnit {
     pub name: String,
@@ -9,6 +21,14 @@ pub struct GeologicUnit {
 }
 
 /// Strike and dip measurement for a geologic surface.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let sd = StrikeDip { strike_deg: 45.0, dip_deg: 30.0 };
+/// assert!((sd.dip_direction() - 135.0).abs() < 1e-6);
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct StrikeDip {
     pub strike_deg: f64,
@@ -17,6 +37,14 @@ pub struct StrikeDip {
 
 impl StrikeDip {
     /// Returns the dip direction in degrees (strike + 90, wrapped to 0..360).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let sd = StrikeDip { strike_deg: 300.0, dip_deg: 60.0 };
+    /// assert!((sd.dip_direction() - 30.0).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn dip_direction(&self) -> f64 {
         (self.strike_deg + 90.0) % 360.0
@@ -24,6 +52,14 @@ impl StrikeDip {
 }
 
 /// A 2D spatial grid of optional geologic units.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mut grid = GeologicGrid::new(3, 3, 10.0);
+/// assert!(grid.get(0, 0).is_none());
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeologicGrid {
     pub nx: usize,
@@ -35,6 +71,15 @@ pub struct GeologicGrid {
 impl GeologicGrid {
     /// Creates a new grid with the given dimensions and cell size.
     /// All cells are initially `None`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let grid = GeologicGrid::new(4, 3, 10.0);
+    /// assert_eq!(grid.nx, 4);
+    /// assert_eq!(grid.ny, 3);
+    /// ```
     #[must_use]
     pub fn new(nx: usize, ny: usize, cell_size_m: f64) -> Self {
         Self {
@@ -50,6 +95,16 @@ impl GeologicGrid {
     /// # Panics
     ///
     /// Panics if x >= nx or y >= ny.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let mut grid = GeologicGrid::new(3, 3, 1.0);
+    /// let unit = GeologicUnit { name: "Granite".into(), rock_type: "igneous".into(), age_ma: 300.0 };
+    /// grid.set(1, 1, unit.clone());
+    /// assert_eq!(grid.get(1, 1).unwrap(), &unit);
+    /// ```
     pub fn set(&mut self, x: usize, y: usize, unit: GeologicUnit) {
         assert!(x < self.nx, "x index {x} out of bounds (nx={})", self.nx);
         assert!(y < self.ny, "y index {y} out of bounds (ny={})", self.ny);
@@ -61,6 +116,14 @@ impl GeologicGrid {
     /// # Panics
     ///
     /// Panics if x >= nx or y >= ny.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let grid = GeologicGrid::new(3, 3, 5.0);
+    /// assert!(grid.get(0, 0).is_none());
+    /// ```
     #[must_use]
     pub fn get(&self, x: usize, y: usize) -> Option<&GeologicUnit> {
         assert!(x < self.nx, "x index {x} out of bounds (nx={})", self.nx);
@@ -69,6 +132,17 @@ impl GeologicGrid {
     }
 
     /// Fills every cell in the grid with the given geologic unit.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let mut grid = GeologicGrid::new(2, 2, 1.0);
+    /// let unit = GeologicUnit { name: "Shale".into(), rock_type: "sedimentary".into(), age_ma: 100.0 };
+    /// grid.fill(unit);
+    /// assert!(grid.get(0, 0).is_some());
+    /// assert!(grid.get(1, 1).is_some());
+    /// ```
     pub fn fill(&mut self, unit: GeologicUnit) {
         for cell in &mut self.cells {
             *cell = Some(unit.clone());
@@ -77,6 +151,16 @@ impl GeologicGrid {
 }
 
 /// A horizontal geologic layer within a stratigraphic column.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mut col = StratigraphicColumn::new();
+/// col.add_layer("Limestone".into(), 10.0, "carbonate".into());
+/// let layer = col.layer_at_depth(5.0).unwrap();
+/// assert_eq!(layer.name, "Limestone");
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GeologicLayer {
     pub name: String,
@@ -86,6 +170,16 @@ pub struct GeologicLayer {
 }
 
 /// An ordered sequence of geologic layers forming a stratigraphic column.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mut col = StratigraphicColumn::new();
+/// col.add_layer("Topsoil".into(), 2.0, "soil".into());
+/// col.add_layer("Sandstone".into(), 10.0, "clastic".into());
+/// assert!((col.total_thickness() - 12.0).abs() < 1e-6);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StratigraphicColumn {
     layers: Vec<GeologicLayer>,
@@ -93,6 +187,14 @@ pub struct StratigraphicColumn {
 
 impl StratigraphicColumn {
     /// Creates a new empty stratigraphic column.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let col = StratigraphicColumn::new();
+    /// assert!((col.total_thickness()).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self { layers: Vec::new() }
@@ -100,6 +202,15 @@ impl StratigraphicColumn {
 
     /// Adds a layer to the column. The layer's `depth_top_m` is set automatically
     /// based on the current total thickness.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let mut col = StratigraphicColumn::new();
+    /// col.add_layer("Shale".into(), 8.0, "mudrock".into());
+    /// assert!((col.total_thickness() - 8.0).abs() < 1e-6);
+    /// ```
     pub fn add_layer(&mut self, name: String, thickness_m: f64, rock_type: String) {
         let depth_top_m = self.total_thickness();
         self.layers.push(GeologicLayer {
@@ -111,12 +222,34 @@ impl StratigraphicColumn {
     }
 
     /// Returns the total thickness of all layers in the column.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let mut col = StratigraphicColumn::new();
+    /// col.add_layer("A".into(), 5.0, "sand".into());
+    /// col.add_layer("B".into(), 10.0, "clay".into());
+    /// assert!((col.total_thickness() - 15.0).abs() < 1e-6);
+    /// ```
     #[must_use]
     pub fn total_thickness(&self) -> f64 {
         self.layers.iter().map(|l| l.thickness_m).sum()
     }
 
     /// Returns a reference to the layer at the given depth, if any.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let mut col = StratigraphicColumn::new();
+    /// col.add_layer("Topsoil".into(), 2.0, "soil".into());
+    /// col.add_layer("Bedrock".into(), 20.0, "granite".into());
+    /// assert_eq!(col.layer_at_depth(1.0).unwrap().name, "Topsoil");
+    /// assert_eq!(col.layer_at_depth(10.0).unwrap().name, "Bedrock");
+    /// assert!(col.layer_at_depth(25.0).is_none());
+    /// ```
     #[must_use]
     pub fn layer_at_depth(&self, depth_m: f64) -> Option<&GeologicLayer> {
         self.layers

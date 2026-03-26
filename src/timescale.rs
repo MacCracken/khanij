@@ -4,6 +4,15 @@
 use serde::{Deserialize, Serialize};
 
 /// A geologic time interval with start and end ages in Ma (millions of years ago).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let interval = Period::Jurassic.interval();
+/// assert_eq!(interval.name, "Jurassic");
+/// assert!(interval.start_ma > interval.end_ma);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct TimeInterval {
     pub name: &'static str,
@@ -13,12 +22,29 @@ pub struct TimeInterval {
 
 impl TimeInterval {
     /// Duration in millions of years.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let dur = Period::Jurassic.interval().duration_ma();
+    /// assert!((dur - 56.4).abs() < 0.1);
+    /// ```
     #[must_use]
     pub fn duration_ma(&self) -> f64 {
         self.start_ma - self.end_ma
     }
 
     /// Check if an age (in Ma) falls within this interval.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let jurassic = Period::Jurassic.interval();
+    /// assert!(jurassic.contains_age(150.0));
+    /// assert!(!jurassic.contains_age(50.0));
+    /// ```
     #[must_use]
     pub fn contains_age(&self, age_ma: f64) -> bool {
         age_ma >= self.end_ma && age_ma < self.start_ma
@@ -30,6 +56,15 @@ impl TimeInterval {
 // ---------------------------------------------------------------------------
 
 /// Geologic eon — the largest division of geologic time.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let interval = Eon::Phanerozoic.interval();
+/// assert!(interval.contains_age(100.0));
+/// assert_eq!(Eon::ALL.len(), 4);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Eon {
@@ -40,6 +75,15 @@ pub enum Eon {
 }
 
 impl Eon {
+    /// Returns the time interval for this eon.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let archean = Eon::Archean.interval();
+    /// assert!((archean.start_ma - 4000.0).abs() < 0.1);
+    /// ```
     #[must_use]
     pub fn interval(&self) -> TimeInterval {
         match self {
@@ -80,6 +124,15 @@ impl Eon {
 // ---------------------------------------------------------------------------
 
 /// Geologic era — subdivision of an eon.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let mesozoic = Era::Mesozoic.interval();
+/// assert!(mesozoic.contains_age(150.0));
+/// assert_eq!(Era::ALL.len(), 3);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Era {
@@ -90,6 +143,15 @@ pub enum Era {
 }
 
 impl Era {
+    /// Returns the time interval for this era.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cenozoic = Era::Cenozoic.interval();
+    /// assert!((cenozoic.start_ma - 66.0).abs() < 0.1);
+    /// ```
     #[must_use]
     pub fn interval(&self) -> TimeInterval {
         match self {
@@ -112,6 +174,13 @@ impl Era {
     }
 
     /// Parent eon.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert_eq!(Era::Mesozoic.eon(), Eon::Phanerozoic);
+    /// ```
     #[must_use]
     pub fn eon(&self) -> Eon {
         Eon::Phanerozoic
@@ -126,6 +195,15 @@ impl Era {
 // ---------------------------------------------------------------------------
 
 /// Geologic period — subdivision of an era.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let j = Period::Jurassic.interval();
+/// assert!(j.contains_age(160.0));
+/// assert_eq!(Period::Jurassic.era(), Era::Mesozoic);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Period {
@@ -147,6 +225,15 @@ pub enum Period {
 }
 
 impl Period {
+    /// Returns the time interval for this period.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cretaceous = Period::Cretaceous.interval();
+    /// assert!((cretaceous.start_ma - 145.0).abs() < 0.1);
+    /// ```
     #[must_use]
     pub fn interval(&self) -> TimeInterval {
         match self {
@@ -214,6 +301,14 @@ impl Period {
     }
 
     /// Parent era.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert_eq!(Period::Cambrian.era(), Era::Paleozoic);
+    /// assert_eq!(Period::Jurassic.era(), Era::Mesozoic);
+    /// ```
     #[must_use]
     pub fn era(&self) -> Era {
         match self {
@@ -250,6 +345,15 @@ impl Period {
 // ---------------------------------------------------------------------------
 
 /// Geologic epoch — subdivision of a period (Cenozoic detail).
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let eocene = Epoch::Eocene.interval();
+/// assert!(eocene.contains_age(45.0));
+/// assert_eq!(Epoch::Eocene.period(), Period::Paleogene);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Epoch {
@@ -266,6 +370,15 @@ pub enum Epoch {
 }
 
 impl Epoch {
+    /// Returns the time interval for this epoch.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let holocene = Epoch::Holocene.interval();
+    /// assert!((holocene.end_ma).abs() < 0.001);
+    /// ```
     #[must_use]
     pub fn interval(&self) -> TimeInterval {
         match self {
@@ -308,6 +421,14 @@ impl Epoch {
     }
 
     /// Parent period.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// assert_eq!(Epoch::Miocene.period(), Period::Neogene);
+    /// assert_eq!(Epoch::Holocene.period(), Period::Quaternary);
+    /// ```
     #[must_use]
     pub fn period(&self) -> Period {
         match self {
@@ -334,6 +455,14 @@ impl Epoch {
 // ---------------------------------------------------------------------------
 
 /// Look up the geologic period for a given age in Ma.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(period_at_age(70.0), Some(Period::Cretaceous));
+/// assert_eq!(period_at_age(3000.0), None);
+/// ```
 #[must_use]
 pub fn period_at_age(age_ma: f64) -> Option<Period> {
     Period::ALL
@@ -343,6 +472,14 @@ pub fn period_at_age(age_ma: f64) -> Option<Period> {
 }
 
 /// Look up the geologic era for a given age in Ma.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(era_at_age(100.0), Some(Era::Mesozoic));
+/// assert_eq!(era_at_age(3000.0), None);
+/// ```
 #[must_use]
 pub fn era_at_age(age_ma: f64) -> Option<Era> {
     Era::ALL
@@ -352,6 +489,14 @@ pub fn era_at_age(age_ma: f64) -> Option<Era> {
 }
 
 /// Look up the geologic eon for a given age in Ma.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(eon_at_age(3000.0), Some(Eon::Archean));
+/// assert_eq!(eon_at_age(5000.0), None);
+/// ```
 #[must_use]
 pub fn eon_at_age(age_ma: f64) -> Option<Eon> {
     Eon::ALL
@@ -362,6 +507,14 @@ pub fn eon_at_age(age_ma: f64) -> Option<Eon> {
 
 /// Look up the Cenozoic epoch for a given age in Ma.
 /// Returns `None` for ages outside the Cenozoic.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// assert_eq!(epoch_at_age(45.0), Some(Epoch::Eocene));
+/// assert_eq!(epoch_at_age(100.0), None); // Cretaceous
+/// ```
 #[must_use]
 pub fn epoch_at_age(age_ma: f64) -> Option<Epoch> {
     Epoch::ALL
@@ -371,6 +524,15 @@ pub fn epoch_at_age(age_ma: f64) -> Option<Epoch> {
 }
 
 /// Full stratigraphic classification for a given age.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let pos = classify_age(150.0);
+/// assert_eq!(pos.period, Some(Period::Jurassic));
+/// assert_eq!(pos.epoch, None); // pre-Cenozoic
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StratigraphicPosition {
     pub age_ma: f64,
@@ -381,6 +543,16 @@ pub struct StratigraphicPosition {
 }
 
 /// Classify an age into its full stratigraphic position.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let pos = classify_age(10.0);
+/// assert_eq!(pos.eon, Some(Eon::Phanerozoic));
+/// assert_eq!(pos.era, Some(Era::Cenozoic));
+/// assert_eq!(pos.epoch, Some(Epoch::Miocene));
+/// ```
 #[must_use]
 pub fn classify_age(age_ma: f64) -> StratigraphicPosition {
     StratigraphicPosition {

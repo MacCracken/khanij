@@ -9,6 +9,14 @@ use std::f64::consts::PI;
 // ---------------------------------------------------------------------------
 
 /// Systems tract classification within a depositional sequence.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let st = SeaLevelCycle::classify_systems_tract(0.1);
+/// assert_eq!(st, SystemsTract::LowstandST);
+/// ```
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SystemsTract {
@@ -23,6 +31,15 @@ pub enum SystemsTract {
 }
 
 /// Depositional environment classification.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let env = DepositionalEnvironment::Shoreface;
+/// let adj = WalthersLaw::lateral_equivalent(env);
+/// assert!(adj.contains(&DepositionalEnvironment::Shelf));
+/// ```
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DepositionalEnvironment {
@@ -49,6 +66,18 @@ pub enum DepositionalEnvironment {
 // ---------------------------------------------------------------------------
 
 /// Sinusoidal model of a eustatic sea-level cycle.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let cycle = SeaLevelCycle {
+///     amplitude_m: 50.0,
+///     period_years: 100_000.0,
+/// };
+/// let level = cycle.sea_level_at(25_000.0);
+/// assert!((level - 50.0).abs() < 1e-10);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeaLevelCycle {
     /// Half the peak-to-trough range of the cycle (metres).
@@ -62,6 +91,18 @@ impl SeaLevelCycle {
     ///
     /// Returns the elevation in metres as a sinusoidal function:
     /// `amplitude * sin(2 * PI * time / period)`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let cycle = SeaLevelCycle {
+    ///     amplitude_m: 30.0,
+    ///     period_years: 40_000.0,
+    /// };
+    /// let level = cycle.sea_level_at(0.0);
+    /// assert!(level.abs() < 1e-10);
+    /// ```
     #[must_use]
     pub fn sea_level_at(&self, time_years: f64) -> f64 {
         self.amplitude_m * (2.0 * PI * time_years / self.period_years).sin()
@@ -76,6 +117,14 @@ impl SeaLevelCycle {
     /// | 0.25 – 0.50 | Transgressive |
     /// | 0.50 – 0.75 | Highstand     |
     /// | 0.75 – 1.00 | Falling stage |
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let st = SeaLevelCycle::classify_systems_tract(0.3);
+    /// assert_eq!(st, SystemsTract::TransgressiveST);
+    /// ```
     #[must_use]
     pub fn classify_systems_tract(phase: f64) -> SystemsTract {
         match phase {
@@ -95,6 +144,14 @@ impl SeaLevelCycle {
 /// subsidence.
 ///
 /// `accommodation = sea_level_change + subsidence`
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let acc = accommodation_space(10.0, 5.0);
+/// assert!((acc - 15.0).abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn accommodation_space(sea_level_change_m: f64, subsidence_m: f64) -> f64 {
     sea_level_change_m + subsidence_m
@@ -109,6 +166,14 @@ pub fn accommodation_space(sea_level_change_m: f64, subsidence_m: f64) -> f64 {
 /// # Panics
 ///
 /// Panics if `sediment_supply` is zero.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let ratio = sediment_supply_ratio(100.0, 50.0);
+/// assert!((ratio - 2.0).abs() < 1e-10);
+/// ```
 #[must_use]
 pub fn sediment_supply_ratio(accommodation: f64, sediment_supply: f64) -> f64 {
     assert!(sediment_supply != 0.0, "sediment_supply must be non-zero");
@@ -121,11 +186,28 @@ pub fn sediment_supply_ratio(accommodation: f64, sediment_supply: f64) -> f64 {
 
 /// Walther's Law helper: facies that occur in conformable vertical succession
 /// also occur in laterally adjacent environments.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let adj = WalthersLaw::lateral_equivalent(DepositionalEnvironment::Shelf);
+/// assert!(adj.contains(&DepositionalEnvironment::DeepMarine));
+/// ```
 pub struct WalthersLaw;
 
 impl WalthersLaw {
     /// Return the set of depositional environments laterally adjacent to the
     /// given environment (including the environment itself).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use khanij::*;
+    /// let adj = WalthersLaw::lateral_equivalent(DepositionalEnvironment::Shoreface);
+    /// assert!(adj.contains(&DepositionalEnvironment::Deltaic));
+    /// assert!(adj.contains(&DepositionalEnvironment::Shelf));
+    /// ```
     #[must_use]
     pub fn lateral_equivalent(
         environment: DepositionalEnvironment,
@@ -149,6 +231,18 @@ impl WalthersLaw {
 // ---------------------------------------------------------------------------
 
 /// A parasequence boundary marking a marine flooding surface or equivalent.
+///
+/// # Examples
+///
+/// ```
+/// # use khanij::*;
+/// let boundary = ParasequenceBoundary {
+///     depth_m: 123.4,
+///     age_ma: 65.5,
+///     flooding_surface: true,
+/// };
+/// assert!(boundary.flooding_surface);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParasequenceBoundary {
     /// Depth of the boundary below a reference datum (metres).
