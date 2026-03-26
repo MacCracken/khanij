@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum RockType {
-    Igneous,      // from magma/lava
-    Sedimentary,  // from deposition
-    Metamorphic,  // from heat/pressure transformation
+    Igneous,     // from magma/lava
+    Sedimentary, // from deposition
+    Metamorphic, // from heat/pressure transformation
 }
 
 /// Geological process that drives rock cycle transitions.
@@ -23,8 +23,8 @@ pub enum GeologicalProcess {
 pub struct Rock {
     pub name: String,
     pub rock_type: RockType,
-    pub density: f32,       // g/cm³
-    pub porosity: f32,      // 0.0-1.0
+    pub density: f32,  // g/cm³
+    pub porosity: f32, // 0.0-1.0
     pub primary_minerals: Vec<String>,
 }
 
@@ -42,20 +42,144 @@ impl Rock {
         if density <= 0.0 || !(0.0..=1.0).contains(&porosity) {
             return None;
         }
-        Some(Self { name: name.into(), rock_type, density, porosity, primary_minerals })
+        Some(Self {
+            name: name.into(),
+            rock_type,
+            density,
+            porosity,
+            primary_minerals,
+        })
     }
 
-    #[must_use] pub fn granite() -> Self {
-        Self { name: "Granite".into(), rock_type: RockType::Igneous, density: 2.7, porosity: 0.01, primary_minerals: vec!["Quartz".into(), "Feldspar".into(), "Mica".into()] }
+    #[must_use]
+    pub fn granite() -> Self {
+        Self {
+            name: "Granite".into(),
+            rock_type: RockType::Igneous,
+            density: 2.7,
+            porosity: 0.01,
+            primary_minerals: vec!["Quartz".into(), "Feldspar".into(), "Mica".into()],
+        }
     }
-    #[must_use] pub fn sandstone() -> Self {
-        Self { name: "Sandstone".into(), rock_type: RockType::Sedimentary, density: 2.3, porosity: 0.15, primary_minerals: vec!["Quartz".into()] }
+    #[must_use]
+    pub fn sandstone() -> Self {
+        Self {
+            name: "Sandstone".into(),
+            rock_type: RockType::Sedimentary,
+            density: 2.3,
+            porosity: 0.15,
+            primary_minerals: vec!["Quartz".into()],
+        }
     }
-    #[must_use] pub fn marble() -> Self {
-        Self { name: "Marble".into(), rock_type: RockType::Metamorphic, density: 2.7, porosity: 0.005, primary_minerals: vec!["Calcite".into()] }
+    #[must_use]
+    pub fn marble() -> Self {
+        Self {
+            name: "Marble".into(),
+            rock_type: RockType::Metamorphic,
+            density: 2.7,
+            porosity: 0.005,
+            primary_minerals: vec!["Calcite".into()],
+        }
     }
-    #[must_use] pub fn basalt() -> Self {
-        Self { name: "Basalt".into(), rock_type: RockType::Igneous, density: 3.0, porosity: 0.01, primary_minerals: vec!["Feldspar".into(), "Pyroxene".into()] }
+    #[must_use]
+    pub fn basalt() -> Self {
+        Self {
+            name: "Basalt".into(),
+            rock_type: RockType::Igneous,
+            density: 3.0,
+            porosity: 0.01,
+            primary_minerals: vec!["Feldspar".into(), "Pyroxene".into()],
+        }
+    }
+    #[must_use]
+    pub fn obsidian() -> Self {
+        Self {
+            name: "Obsidian".into(),
+            rock_type: RockType::Igneous,
+            density: 2.35,
+            porosity: 0.001,
+            primary_minerals: vec!["Volcanic glass".into()],
+        }
+    }
+    #[must_use]
+    pub fn rhyolite() -> Self {
+        Self {
+            name: "Rhyolite".into(),
+            rock_type: RockType::Igneous,
+            density: 2.5,
+            porosity: 0.05,
+            primary_minerals: vec!["Quartz".into(), "Feldspar".into()],
+        }
+    }
+    #[must_use]
+    pub fn limestone() -> Self {
+        Self {
+            name: "Limestone".into(),
+            rock_type: RockType::Sedimentary,
+            density: 2.5,
+            porosity: 0.10,
+            primary_minerals: vec!["Calcite".into()],
+        }
+    }
+    #[must_use]
+    pub fn shale() -> Self {
+        Self {
+            name: "Shale".into(),
+            rock_type: RockType::Sedimentary,
+            density: 2.4,
+            porosity: 0.05,
+            primary_minerals: vec!["Clay minerals".into(), "Quartz".into()],
+        }
+    }
+    #[must_use]
+    pub fn conglomerate() -> Self {
+        Self {
+            name: "Conglomerate".into(),
+            rock_type: RockType::Sedimentary,
+            density: 2.5,
+            porosity: 0.12,
+            primary_minerals: vec!["Quartz".into(), "Feldspar".into()],
+        }
+    }
+    #[must_use]
+    pub fn slate() -> Self {
+        Self {
+            name: "Slate".into(),
+            rock_type: RockType::Metamorphic,
+            density: 2.75,
+            porosity: 0.005,
+            primary_minerals: vec!["Quartz".into(), "Muscovite".into()],
+        }
+    }
+    #[must_use]
+    pub fn gneiss() -> Self {
+        Self {
+            name: "Gneiss".into(),
+            rock_type: RockType::Metamorphic,
+            density: 2.7,
+            porosity: 0.005,
+            primary_minerals: vec!["Feldspar".into(), "Quartz".into(), "Mica".into()],
+        }
+    }
+    #[must_use]
+    pub fn quartzite() -> Self {
+        Self {
+            name: "Quartzite".into(),
+            rock_type: RockType::Metamorphic,
+            density: 2.65,
+            porosity: 0.005,
+            primary_minerals: vec!["Quartz".into()],
+        }
+    }
+    #[must_use]
+    pub fn schist() -> Self {
+        Self {
+            name: "Schist".into(),
+            rock_type: RockType::Metamorphic,
+            density: 2.65,
+            porosity: 0.01,
+            primary_minerals: vec!["Mica".into(), "Quartz".into(), "Feldspar".into()],
+        }
     }
 }
 
@@ -98,8 +222,17 @@ mod tests {
 
     #[test]
     fn porosity_in_range() {
-        for r in [Rock::granite(), Rock::sandstone(), Rock::marble(), Rock::basalt()] {
-            assert!((0.0..=1.0).contains(&r.porosity), "{} porosity out of range", r.name);
+        for r in [
+            Rock::granite(),
+            Rock::sandstone(),
+            Rock::marble(),
+            Rock::basalt(),
+        ] {
+            assert!(
+                (0.0..=1.0).contains(&r.porosity),
+                "{} porosity out of range",
+                r.name
+            );
         }
     }
 
@@ -122,6 +255,15 @@ mod tests {
 
     #[test]
     fn validated_rock_accepts_valid() {
-        assert!(Rock::new("Good", RockType::Sedimentary, 2.3, 0.15, vec!["Quartz".into()]).is_some());
+        assert!(
+            Rock::new(
+                "Good",
+                RockType::Sedimentary,
+                2.3,
+                0.15,
+                vec!["Quartz".into()]
+            )
+            .is_some()
+        );
     }
 }

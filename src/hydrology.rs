@@ -85,7 +85,8 @@ pub fn flow_regime(
     channel_depth_m: f64,
     fluid_viscosity: f64,
 ) -> Option<buoyancy::FlowRegime> {
-    let re = buoyancy::reynolds_number(fluid_density, velocity, channel_depth_m, fluid_viscosity).ok()?;
+    let re = buoyancy::reynolds_number(fluid_density, velocity, channel_depth_m, fluid_viscosity)
+        .ok()?;
     if re < 500.0 {
         Some(buoyancy::FlowRegime::Laminar)
     } else if re < 2000.0 {
@@ -118,7 +119,12 @@ pub fn sediment_drag_force(
     drag_coefficient: f64,
     cross_section_area: f64,
 ) -> f64 {
-    buoyancy::drag_force(fluid_density, velocity, drag_coefficient, cross_section_area)
+    buoyancy::drag_force(
+        fluid_density,
+        velocity,
+        drag_coefficient,
+        cross_section_area,
+    )
 }
 
 /// Terminal velocity of a falling rock or grain using pravash.
@@ -149,6 +155,109 @@ pub fn terminal_velocity(
 #[must_use]
 pub fn darcy_flow(hydraulic_conductivity: f64, hydraulic_gradient: f64, area: f64) -> f64 {
     hydraulic_conductivity * hydraulic_gradient * area
+}
+
+/// Aquifer storage coefficient (storativity) — dimensionless.
+/// Fraction of water released per unit area per unit decline in head.
+pub mod storativity {
+    /// Confined aquifer (typical range 1e-5 to 1e-3).
+    pub const CONFINED_TYPICAL: f64 = 1e-4;
+    /// Unconfined aquifer (specific yield, typically 0.01 to 0.30).
+    pub const UNCONFINED_SAND: f64 = 0.25;
+    pub const UNCONFINED_GRAVEL: f64 = 0.22;
+    pub const UNCONFINED_SILT: f64 = 0.08;
+    pub const UNCONFINED_CLAY: f64 = 0.03;
+}
+
+/// Theis well function W(u) — approximated using the series expansion.
+///
+/// W(u) = -γ - ln(u) + u - u²/4 + u³/18 - ...
+///
+/// Valid for u > 0. Used in the Theis equation for transient well drawdown.
+#[must_use]
+pub fn well_function(u: f64) -> f64 {
+    if u <= 0.0 {
+        return f64::INFINITY;
+    }
+    // Euler-Mascheroni constant
+    const GAMMA: f64 = 0.577_215_664_901_532_9;
+    let mut sum = -GAMMA - u.ln();
+    let mut term = u;
+    // Series: Σ (-1)^(n+1) · u^n / (n · n!)
+    for n in 1..=20 {
+        sum += term / (n as f64 * factorial(n));
+        term *= -u;
+    }
+    sum.max(0.0)
+}
+
+fn factorial(n: usize) -> f64 {
+    (1..=n).fold(1.0, |acc, i| acc * i as f64)
+}
+
+/// Theis equation: drawdown at distance `r` from a pumping well at time `t`.
+///
+/// s(r,t) = Q / (4π·T) · W(u)  where  u = r²·S / (4·T·t)
+///
+/// - `pumping_rate`: Q in m³/s
+/// - `transmissivity`: T = K·b in m²/s (hydraulic conductivity × aquifer thickness)
+/// - `storativity`: S (dimensionless)
+/// - `distance_m`: r, distance from well in metres
+/// - `time_seconds`: t, time since pumping began
+///
+/// Returns drawdown in metres.
+#[must_use]
+pub fn theis_drawdown(
+    pumping_rate: f64,
+    transmissivity: f64,
+    storativity: f64,
+    distance_m: f64,
+    time_seconds: f64,
+) -> f64 {
+    if transmissivity <= 0.0 || storativity <= 0.0 || time_seconds <= 0.0 || distance_m <= 0.0 {
+        return 0.0;
+    }
+    let u = distance_m.powi(2) * storativity / (4.0 * transmissivity * time_seconds);
+    let w = well_function(u);
+    pumping_rate / (4.0 * std::f64::consts::PI * transmissivity) * w
+}
+
+/// Cooper-Jacob approximation of drawdown (valid for small u, i.e., long time
+/// or small distance).
+///
+/// s ≈ Q / (4π·T) · [ln(2.25·T·t / (r²·S))]
+///
+/// Same parameters as `theis_drawdown`.
+#[must_use]
+pub fn cooper_jacob_drawdown(
+    pumping_rate: f64,
+    transmissivity: f64,
+    storativity: f64,
+    distance_m: f64,
+    time_seconds: f64,
+) -> f64 {
+    if transmissivity <= 0.0 || storativity <= 0.0 || time_seconds <= 0.0 || distance_m <= 0.0 {
+        return 0.0;
+    }
+    let arg = 2.25 * transmissivity * time_seconds / (distance_m.powi(2) * storativity);
+    if arg <= 1.0 {
+        return 0.0; // approximation not valid
+    }
+    pumping_rate / (4.0 * std::f64::consts::PI * transmissivity) * arg.ln()
+}
+
+/// Radius of influence of a pumping well (where drawdown ≈ 0).
+///
+/// R = √(2.25 · T · t / S)
+///
+/// - `transmissivity`: T in m²/s
+/// - `storativity`: S (dimensionless)
+/// - `time_seconds`: time since pumping began
+///
+/// Returns radius in metres.
+#[must_use]
+pub fn radius_of_influence(transmissivity: f64, storativity: f64, time_seconds: f64) -> f64 {
+    (2.25 * transmissivity * time_seconds / storativity).sqrt()
 }
 
 /// Hydraulic conductivity values for common rock types in m/s.
@@ -183,6 +292,114 @@ pub fn surface_water_config(width: f64, height: f64, smoothing_radius: f64) -> F
 #[must_use]
 pub fn water_particle(x: f64, y: f64) -> FluidParticle {
     FluidParticle::new_2d(x, y, 1.0)
+}
+
+/// Sediment transport regime based on the Hjulström curve.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransportRegime {
+    /// Velocity too low — sediment deposits on the bed.
+    Deposition,
+    /// Velocity sufficient to keep sediment in transport but not erode new grains.
+    Transport,
+    /// Velocity high enough to erode (entrain) grains from the bed.
+    Erosion,
+}
+
+/// Hjulström curve: critical erosion velocity for a given grain diameter.
+///
+/// Returns the approximate flow velocity (m/s) needed to erode a grain from
+/// the bed. The curve is U-shaped: fine cohesive clays need high velocity,
+/// medium sand needs the least, coarse gravel needs high velocity again.
+///
+/// - `grain_diameter_m`: grain diameter in metres
+#[must_use]
+pub fn hjulstrom_erosion_velocity(grain_diameter_m: f64) -> f64 {
+    let d = grain_diameter_m;
+    if d < 1e-6 {
+        // Colloidal — very high erosion velocity (cohesion dominates)
+        5.0
+    } else if d < 6.25e-5 {
+        // Clay to fine silt — cohesion curve: v ∝ d^(-0.4)
+        0.1 * (6.25e-5 / d).powf(0.4)
+    } else {
+        // Silt to boulders — gravity/inertia curve: v ∝ d^0.5
+        4.0 * d.sqrt()
+    }
+}
+
+/// Hjulström curve: critical deposition (settling) velocity.
+///
+/// Below this velocity, grains settle out of suspension.
+/// Uses an empirical fit to the lower Hjulström curve.
+///
+/// - `grain_diameter_m`: grain diameter in metres
+#[must_use]
+pub fn hjulstrom_deposition_velocity(grain_diameter_m: f64) -> f64 {
+    let d = grain_diameter_m;
+    // Empirical lower Hjulström curve: settling-dominated for coarse grains,
+    // with a floor for very fine particles (Brownian keeps them suspended).
+    // Calibrated: ~0.01 m/s for fine sand (0.1mm), ~0.05 m/s for 1mm.
+    let v = 1.6 * d.powf(0.8);
+    v.max(0.001)
+}
+
+/// Classify the sediment transport regime for a given grain size and flow velocity.
+///
+/// - `grain_diameter_m`: grain diameter in metres
+/// - `flow_velocity`: water velocity in m/s
+#[must_use]
+pub fn transport_regime(grain_diameter_m: f64, flow_velocity: f64) -> TransportRegime {
+    let v_erosion = hjulstrom_erosion_velocity(grain_diameter_m);
+    let v_deposition = hjulstrom_deposition_velocity(grain_diameter_m);
+
+    if flow_velocity >= v_erosion {
+        TransportRegime::Erosion
+    } else if flow_velocity >= v_deposition {
+        TransportRegime::Transport
+    } else {
+        TransportRegime::Deposition
+    }
+}
+
+/// Shields parameter for incipient motion of a sediment grain.
+///
+/// θ = τ / ((ρ_s - ρ_f) · g · d)
+///
+/// - `shear_stress`: bed shear stress in Pa
+/// - `grain_density`: grain density in kg/m³ (quartz: 2650)
+/// - `fluid_density`: fluid density in kg/m³ (water: 1000)
+/// - `grain_diameter_m`: grain diameter in metres
+/// - `gravity`: gravitational acceleration (9.81 m/s²)
+#[must_use]
+pub fn shields_parameter(
+    shear_stress: f64,
+    grain_density: f64,
+    fluid_density: f64,
+    grain_diameter_m: f64,
+    gravity: f64,
+) -> f64 {
+    shear_stress / ((grain_density - fluid_density) * gravity * grain_diameter_m)
+}
+
+/// Critical Shields parameter threshold for incipient motion (~0.047 for turbulent flow).
+pub const SHIELDS_CRITICAL: f64 = 0.047;
+
+/// Check if a grain will be mobilised (Shields parameter > critical).
+#[must_use]
+pub fn is_grain_mobile(
+    shear_stress: f64,
+    grain_density: f64,
+    fluid_density: f64,
+    grain_diameter_m: f64,
+    gravity: f64,
+) -> bool {
+    shields_parameter(
+        shear_stress,
+        grain_density,
+        fluid_density,
+        grain_diameter_m,
+        gravity,
+    ) > SHIELDS_CRITICAL
 }
 
 #[cfg(test)]
@@ -257,6 +474,109 @@ mod tests {
     fn grain_reynolds_small_for_clay() {
         let v = stokes_settling_velocity(2650.0, 1000.0, 0.00001, 0.001, 9.81);
         let re = grain_reynolds_number(1000.0, v, 0.00001, 0.001).unwrap();
-        assert!(re < 1.0, "Clay grain Re should be <1 for Stokes validity, got {re}");
+        assert!(
+            re < 1.0,
+            "Clay grain Re should be <1 for Stokes validity, got {re}"
+        );
+    }
+
+    // --- Hjulström curve tests ---
+
+    #[test]
+    fn hjulstrom_sand_easiest_to_erode() {
+        // Medium sand (~0.5mm) should require less velocity than clay or gravel
+        let sand = hjulstrom_erosion_velocity(0.0005);
+        let clay = hjulstrom_erosion_velocity(0.00001);
+        let gravel = hjulstrom_erosion_velocity(0.01);
+        assert!(sand < clay, "Sand should erode easier than clay");
+        assert!(sand < gravel, "Sand should erode easier than gravel");
+    }
+
+    #[test]
+    fn hjulstrom_deposition_increases_with_size() {
+        let fine = hjulstrom_deposition_velocity(0.0001);
+        let coarse = hjulstrom_deposition_velocity(0.001);
+        assert!(coarse > fine);
+    }
+
+    #[test]
+    fn transport_regime_classification() {
+        let d = 0.001; // 1mm sand
+        let v_erosion = hjulstrom_erosion_velocity(d);
+        let v_deposition = hjulstrom_deposition_velocity(d);
+
+        assert_eq!(
+            transport_regime(d, v_erosion + 0.1),
+            TransportRegime::Erosion
+        );
+        // Midpoint between deposition and erosion velocity → transport
+        let v_transport = (v_deposition + v_erosion) / 2.0;
+        assert_eq!(transport_regime(d, v_transport), TransportRegime::Transport);
+        assert_eq!(
+            transport_regime(d, v_deposition * 0.5),
+            TransportRegime::Deposition
+        );
+    }
+
+    #[test]
+    fn shields_mobile_at_high_stress() {
+        // High shear stress should mobilise sand
+        assert!(is_grain_mobile(5.0, 2650.0, 1000.0, 0.001, 9.81));
+    }
+
+    #[test]
+    fn shields_immobile_at_low_stress() {
+        // Very low shear stress should not mobilise gravel
+        assert!(!is_grain_mobile(0.01, 2650.0, 1000.0, 0.01, 9.81));
+    }
+
+    // --- Groundwater tests ---
+
+    #[test]
+    fn theis_drawdown_near_well() {
+        // Pumping 0.01 m³/s from confined aquifer (T=0.001, S=1e-4)
+        // At 10m after 1 day (86400s)
+        let s = theis_drawdown(0.01, 0.001, 1e-4, 10.0, 86400.0);
+        assert!(s > 0.0, "Should have measurable drawdown near well");
+    }
+
+    #[test]
+    fn theis_drawdown_decreases_with_distance() {
+        let near = theis_drawdown(0.01, 0.001, 1e-4, 10.0, 86400.0);
+        let far = theis_drawdown(0.01, 0.001, 1e-4, 100.0, 86400.0);
+        assert!(near > far);
+    }
+
+    #[test]
+    fn theis_drawdown_increases_with_time() {
+        let early = theis_drawdown(0.01, 0.001, 1e-4, 50.0, 3600.0);
+        let late = theis_drawdown(0.01, 0.001, 1e-4, 50.0, 86400.0);
+        assert!(late > early);
+    }
+
+    #[test]
+    fn cooper_jacob_agrees_with_theis_at_late_time() {
+        // At late time / small u, Cooper-Jacob ≈ Theis
+        let theis = theis_drawdown(0.01, 0.001, 1e-4, 10.0, 864_000.0);
+        let cj = cooper_jacob_drawdown(0.01, 0.001, 1e-4, 10.0, 864_000.0);
+        let rel_err = (theis - cj).abs() / theis;
+        assert!(
+            rel_err < 0.05,
+            "Cooper-Jacob should agree within 5% at late time, got {:.1}%",
+            rel_err * 100.0
+        );
+    }
+
+    #[test]
+    fn radius_of_influence_grows_with_time() {
+        let r1 = radius_of_influence(0.001, 1e-4, 3600.0);
+        let r2 = radius_of_influence(0.001, 1e-4, 86400.0);
+        assert!(r2 > r1);
+    }
+
+    #[test]
+    fn well_function_decreasing() {
+        assert!(well_function(0.01) > well_function(0.1));
+        assert!(well_function(0.1) > well_function(1.0));
     }
 }

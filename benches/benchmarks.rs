@@ -1,9 +1,8 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use khanij::{
-    Mineral, MohsHardness, Rock, RockType, GeologicalProcess,
-    SoilComposition, rock_cycle_next,
-    physical_weathering_rate, chemical_weathering_rate, erosion_rate,
-    is_economically_viable,
+    GeologicalProcess, Mineral, MohsHardness, Rock, RockType, SoilComposition,
+    chemical_weathering_rate, erosion_rate, is_economically_viable, physical_weathering_rate,
+    rock_cycle_next,
 };
 
 fn bench_mineral_presets(c: &mut Criterion) {
@@ -42,9 +41,7 @@ fn bench_weathering(c: &mut Criterion) {
     c.bench_function("chemical_weathering_rate", |b| {
         b.iter(|| chemical_weathering_rate(20.0, 1200.0))
     });
-    c.bench_function("erosion_rate", |b| {
-        b.iter(|| erosion_rate(40.0, 15.0, 0.5))
-    });
+    c.bench_function("erosion_rate", |b| b.iter(|| erosion_rate(40.0, 15.0, 0.5)));
 }
 
 fn bench_ore(c: &mut Criterion) {

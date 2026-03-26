@@ -15,13 +15,16 @@
 //! - **`fluids`** — groundwater flow, sediment transport, and surface hydrology
 //!   via [pravash](https://crates.io/crates/pravash).
 
+pub mod crystal;
 pub mod error;
 pub mod mineral;
-pub mod crystal;
+pub mod ore;
 pub mod rock;
 pub mod soil;
 pub mod weathering;
-pub mod ore;
+
+#[cfg(feature = "chemistry")]
+pub mod stability;
 
 #[cfg(feature = "thermodynamics")]
 pub mod geothermal;
@@ -33,32 +36,46 @@ pub mod hydrology;
 pub mod logging;
 
 // --- Core re-exports (always available) ---
+pub use crystal::CrystalSystem;
 pub use error::{KhanijError, Result};
 pub use mineral::{Luster, Mineral, MohsHardness};
-pub use crystal::CrystalSystem;
+pub use ore::{
+    DepositType, OreDeposit, ResourceCategory, TonnageGradePoint, cutoff_grade,
+    is_economically_viable, net_present_value, tonnage_grade_curve,
+};
 pub use rock::{GeologicalProcess, Rock, RockType, rock_cycle_next};
 pub use soil::{SoilComposition, SoilTexture};
-pub use ore::{DepositType, OreDeposit, is_economically_viable};
 pub use weathering::{chemical_weathering_rate, erosion_rate, physical_weathering_rate};
 
 // --- Chemistry re-exports (kimiya) ---
 #[cfg(feature = "chemistry")]
 pub use mineral::{dissolution_rate, ionic_radius, lattice_energy};
 #[cfg(feature = "chemistry")]
-pub use weathering::{arrhenius_weathering_rate, dissolution_half_life, remaining_mineral_fraction};
+pub use stability::{
+    equilibrium_temperature, gibbs_at_temperature, gibbs_formation, is_reaction_spontaneous,
+    reaction_enthalpy, reaction_entropy, reaction_gibbs, stable_polymorph,
+};
+#[cfg(feature = "chemistry")]
+pub use weathering::{
+    WEATHERING_REACTIONS, WeatheringReaction, WeatheringType, arrhenius_weathering_rate,
+    dissolution_half_life, mineral_weathering_rate, remaining_mineral_fraction,
+    weathering_reaction,
+};
 
 // --- Thermodynamics re-exports (ushma) ---
 #[cfg(feature = "thermodynamics")]
 pub use geothermal::{
-    gibbs_energy, heat_flux, heat_stored, is_reaction_spontaneous,
-    lithostatic_pressure, rock_thermal_diffusivity, temperature_at_depth,
-    volatile_pressure,
+    MetamorphicFacies, classify_facies, contact_aureole_temperature, facies_at_depth, gibbs_energy,
+    heat_flux, heat_stored, intrusion_cooling, intrusion_cooling_time, is_spontaneous,
+    lithostatic_pressure, rock_thermal_diffusivity, temperature_at_depth, volatile_pressure,
 };
 
 // --- Fluids re-exports (pravash) ---
 #[cfg(feature = "fluids")]
 pub use hydrology::{
-    buoyancy_force, darcy_flow, flow_regime, grain_reynolds_number,
-    sediment_drag_force, stokes_settling_velocity, surface_water_config,
-    terminal_velocity, water_particle,
+    SHIELDS_CRITICAL, TransportRegime, buoyancy_force, cooper_jacob_drawdown, darcy_flow,
+    flow_regime, grain_reynolds_number, hjulstrom_deposition_velocity, hjulstrom_erosion_velocity,
+    is_grain_mobile, radius_of_influence, sediment_drag_force, shields_parameter,
+    stokes_settling_velocity, surface_water_config, terminal_velocity, theis_drawdown,
+    transport_regime, water_particle, well_function,
 };

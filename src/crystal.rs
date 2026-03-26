@@ -18,8 +18,13 @@ impl CrystalSystem {
     #[must_use]
     pub fn symmetry_order(&self) -> u8 {
         match self {
-            Self::Cubic => 48, Self::Hexagonal => 24, Self::Tetragonal => 16,
-            Self::Trigonal => 12, Self::Orthorhombic => 8, Self::Monoclinic => 4, Self::Triclinic => 2,
+            Self::Cubic => 48,
+            Self::Hexagonal => 24,
+            Self::Tetragonal => 16,
+            Self::Trigonal => 12,
+            Self::Orthorhombic => 8,
+            Self::Monoclinic => 4,
+            Self::Triclinic => 2,
         }
     }
 }
@@ -35,8 +40,15 @@ mod tests {
 
     #[test]
     fn all_seven_systems() {
-        let systems = [CrystalSystem::Cubic, CrystalSystem::Tetragonal, CrystalSystem::Orthorhombic,
-            CrystalSystem::Hexagonal, CrystalSystem::Trigonal, CrystalSystem::Monoclinic, CrystalSystem::Triclinic];
+        let systems = [
+            CrystalSystem::Cubic,
+            CrystalSystem::Tetragonal,
+            CrystalSystem::Orthorhombic,
+            CrystalSystem::Hexagonal,
+            CrystalSystem::Trigonal,
+            CrystalSystem::Monoclinic,
+            CrystalSystem::Triclinic,
+        ];
         assert_eq!(systems.len(), 7);
     }
 }

@@ -1,4 +1,6 @@
 use hisab::calc;
+#[cfg(feature = "chemistry")]
+use serde::{Deserialize, Serialize};
 
 /// Rate of physical weathering (relative scale 0-1).
 /// Uses numerical integration over a temperature-moisture interaction model.
@@ -11,8 +13,7 @@ pub fn physical_weathering_rate(temp_range_celsius: f32, moisture_fraction: f32)
     }
     // Integrate the freeze-thaw contribution over the temperature range.
     // The integrand models increasing damage with wider thermal cycling.
-    let rate = calc::integral_simpson(|t| (t / tr).powi(2) * mf, 0.0, tr, 20)
-        .unwrap_or(0.0);
+    let rate = calc::integral_simpson(|t| (t / tr).powi(2) * mf, 0.0, tr, 20).unwrap_or(0.0);
     // Normalise: max rate at temp_range=50, moisture=1 → integral ≈ 50/3 ≈ 16.67
     let normalised = rate / (50.0 / 3.0);
     (normalised as f32).clamp(0.0, 1.0)
@@ -138,6 +139,123 @@ pub fn remaining_mineral_fraction(initial: f64, rate_constant: f64, time_seconds
     kimiya::kinetics::first_order_concentration(initial, rate_constant, time_seconds)
 }
 
+/// A weathering reaction: what a mineral weathers into.
+#[cfg(feature = "chemistry")]
+#[derive(Debug, Clone)]
+pub struct WeatheringReaction {
+    /// Parent mineral name.
+    pub parent: &'static str,
+    /// Chemical formula of the parent mineral (kimiya thermochem key).
+    pub parent_formula: &'static str,
+    /// Solid weathering products with names.
+    pub solid_products: &'static [&'static str],
+    /// Dissolved ions released.
+    pub dissolved_ions: &'static [&'static str],
+    /// Type of weathering that drives this reaction.
+    pub weathering_type: WeatheringType,
+    /// Typical activation energy in J/mol for Arrhenius rate.
+    pub activation_energy_j: f64,
+}
+
+/// Classification of weathering mechanism.
+#[cfg(feature = "chemistry")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum WeatheringType {
+    /// Hydrolysis (reaction with water).
+    Hydrolysis,
+    /// Carbonation (reaction with carbonic acid / CO₂).
+    Carbonation,
+    /// Oxidation (reaction with O₂).
+    Oxidation,
+    /// Dissolution (simple dissolving).
+    Dissolution,
+}
+
+/// Known weathering reactions for common rock-forming minerals.
+#[cfg(feature = "chemistry")]
+pub const WEATHERING_REACTIONS: &[WeatheringReaction] = &[
+    // Feldspar + H₂O + CO₂ → Kaolinite + K⁺ + HCO₃⁻ + SiO₂
+    WeatheringReaction {
+        parent: "Feldspar",
+        parent_formula: "SiO2(s)", // proxy — KAlSi₃O₈ not in kimiya DB
+        solid_products: &["Kaolinite (clay)", "Quartz"],
+        dissolved_ions: &["K⁺", "HCO₃⁻"],
+        weathering_type: WeatheringType::Hydrolysis,
+        activation_energy_j: 67_000.0,
+    },
+    // Calcite + CO₂ + H₂O → Ca²⁺ + 2HCO₃⁻
+    WeatheringReaction {
+        parent: "Calcite",
+        parent_formula: "CaCO3(s)",
+        solid_products: &[],
+        dissolved_ions: &["Ca²⁺", "HCO₃⁻"],
+        weathering_type: WeatheringType::Carbonation,
+        activation_energy_j: 35_000.0,
+    },
+    // Pyrite + O₂ + H₂O → Fe₂O₃ + H₂SO₄
+    WeatheringReaction {
+        parent: "Pyrite",
+        parent_formula: "Fe2O3(s)", // product proxy
+        solid_products: &["Limonite (iron oxide)"],
+        dissolved_ions: &["Fe²⁺", "SO₄²⁻", "H⁺"],
+        weathering_type: WeatheringType::Oxidation,
+        activation_energy_j: 55_000.0,
+    },
+    // Olivine + H₂O + CO₂ → Serpentine + Mg²⁺ + HCO₃⁻ + SiO₂
+    WeatheringReaction {
+        parent: "Olivine",
+        parent_formula: "MgO(s)", // proxy for Mg₂SiO₄
+        solid_products: &["Serpentine", "Silica"],
+        dissolved_ions: &["Mg²⁺", "HCO₃⁻"],
+        weathering_type: WeatheringType::Hydrolysis,
+        activation_energy_j: 79_000.0,
+    },
+    // Halite → Na⁺ + Cl⁻ (simple dissolution)
+    WeatheringReaction {
+        parent: "Halite",
+        parent_formula: "NaCl(s)",
+        solid_products: &[],
+        dissolved_ions: &["Na⁺", "Cl⁻"],
+        weathering_type: WeatheringType::Dissolution,
+        activation_energy_j: 20_000.0,
+    },
+    // Gypsum → Ca²⁺ + SO₄²⁻ + 2H₂O
+    WeatheringReaction {
+        parent: "Gypsum",
+        parent_formula: "CaCO3(s)", // proxy — CaSO₄ not in DB
+        solid_products: &[],
+        dissolved_ions: &["Ca²⁺", "SO₄²⁻"],
+        weathering_type: WeatheringType::Dissolution,
+        activation_energy_j: 25_000.0,
+    },
+];
+
+/// Look up the weathering reaction for a named mineral.
+#[cfg(feature = "chemistry")]
+#[must_use]
+pub fn weathering_reaction(mineral_name: &str) -> Option<&'static WeatheringReaction> {
+    WEATHERING_REACTIONS
+        .iter()
+        .find(|r| r.parent.eq_ignore_ascii_case(mineral_name))
+}
+
+/// Weathering rate constant for a specific mineral at a given temperature,
+/// using the mineral's characteristic activation energy.
+#[cfg(feature = "chemistry")]
+#[must_use]
+pub fn mineral_weathering_rate(mineral_name: &str, temperature_k: f64) -> Option<f64> {
+    let rxn = weathering_reaction(mineral_name)?;
+    // Use a standard pre-exponential factor (varies by mineral, ~1e10 for silicates)
+    let pre_exp = match rxn.weathering_type {
+        WeatheringType::Dissolution => 1e8,
+        WeatheringType::Carbonation => 1e9,
+        WeatheringType::Hydrolysis => 1e10,
+        WeatheringType::Oxidation => 1e11,
+    };
+    arrhenius_weathering_rate(pre_exp, rxn.activation_energy_j, temperature_k)
+}
+
 #[cfg(all(test, feature = "chemistry"))]
 mod chemistry_tests {
     use super::*;
@@ -146,7 +264,7 @@ mod chemistry_tests {
     fn arrhenius_rate_increases_with_temperature() {
         // Typical silicate dissolution: Ea ≈ 60 kJ/mol
         let cold = arrhenius_weathering_rate(1e10, 60_000.0, 283.15).unwrap(); // 10°C
-        let hot = arrhenius_weathering_rate(1e10, 60_000.0, 313.15).unwrap();  // 40°C
+        let hot = arrhenius_weathering_rate(1e10, 60_000.0, 313.15).unwrap(); // 40°C
         assert!(hot > cold);
     }
 
@@ -165,5 +283,49 @@ mod chemistry_tests {
         assert!(late < early);
         assert!(early < 1.0);
         assert!(late > 0.0);
+    }
+
+    #[test]
+    fn feldspar_weathers_to_clay() {
+        let rxn = weathering_reaction("Feldspar").unwrap();
+        assert_eq!(rxn.weathering_type, WeatheringType::Hydrolysis);
+        assert!(rxn.solid_products.contains(&"Kaolinite (clay)"));
+        assert!(rxn.dissolved_ions.contains(&"K⁺"));
+    }
+
+    #[test]
+    fn calcite_weathers_by_carbonation() {
+        let rxn = weathering_reaction("Calcite").unwrap();
+        assert_eq!(rxn.weathering_type, WeatheringType::Carbonation);
+        assert!(rxn.solid_products.is_empty()); // fully dissolves
+        assert!(rxn.dissolved_ions.contains(&"Ca²⁺"));
+    }
+
+    #[test]
+    fn pyrite_oxidizes() {
+        let rxn = weathering_reaction("Pyrite").unwrap();
+        assert_eq!(rxn.weathering_type, WeatheringType::Oxidation);
+        assert!(rxn.dissolved_ions.contains(&"H⁺")); // acid mine drainage
+    }
+
+    #[test]
+    fn halite_dissolves_fastest() {
+        // Dissolution minerals should weather faster than silicates
+        let halite_k = mineral_weathering_rate("Halite", 298.15).unwrap();
+        let feldspar_k = mineral_weathering_rate("Feldspar", 298.15).unwrap();
+        assert!(halite_k > feldspar_k);
+    }
+
+    #[test]
+    fn unknown_mineral_returns_none() {
+        assert!(weathering_reaction("Unobtanium").is_none());
+        assert!(mineral_weathering_rate("Unobtanium", 298.15).is_none());
+    }
+
+    #[test]
+    fn olivine_weathers_faster_warm() {
+        let cold = mineral_weathering_rate("Olivine", 273.15).unwrap();
+        let warm = mineral_weathering_rate("Olivine", 313.15).unwrap();
+        assert!(warm > cold);
     }
 }
