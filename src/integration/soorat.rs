@@ -234,10 +234,7 @@ mod tests {
             beta: 90.0,
             gamma: 90.0,
         };
-        let viz = CrystalVisualization::from_unit_cell(
-            &cell,
-            crate::crystal::CrystalSystem::Cubic,
-        );
+        let viz = CrystalVisualization::from_unit_cell(&cell, crate::crystal::CrystalSystem::Cubic);
         // a vector should be [5, 0, 0]
         assert!((viz.lattice_vectors[0][0] - 5.0).abs() < 0.01);
         assert!(viz.lattice_vectors[0][1].abs() < 0.01);
