@@ -1,6 +1,6 @@
 [package]
 name = "khanij"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 rust-version = "1.89"
 license = "GPL-3.0-only"
@@ -20,6 +20,7 @@ fluids = ["dep:pravash"]
 mechanics = ["dep:dravya"]
 thermodynamics = ["dep:ushma"]
 weather = ["dep:badal"]
+soorat-compat = []
 logging = ["dep:tracing-subscriber"]
 
 [dependencies]

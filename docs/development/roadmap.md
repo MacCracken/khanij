@@ -62,6 +62,21 @@ Khanij does NOT own:
 - [ ] Benchmark regression CI gate
 - [ ] Coverage gate in CI (80% threshold)
 
+## Cross-Crate Bridges
+
+- [ ] `bridge.rs` module — primitive-value conversions for cross-crate geology
+- [ ] **dravya bridge**: mineral hardness (Mohs) → material yield strength estimate; rock porosity → permeability
+- [ ] **ushma bridge**: depth (m), geothermal gradient (K/km) → subsurface temperature; mineral thermal conductivity → formation heat flow
+- [ ] **kimiya bridge**: mineral composition (element percentages) → chemical formula; ore grade → extraction yield
+
+## Soorat Integration
+
+- [ ] `integration/soorat.rs` module — feature-gated `soorat-compat`
+- [ ] **Geologic grid visualization**: `GeologicGrid` layer data (rock type, age, properties) for colored voxel/slice rendering
+- [ ] **Crystal structure**: unit cell vertices, lattice vectors, atom positions for 3D crystal rendering
+- [ ] **Stratigraphic column**: layer sequence with thickness, rock type, age for stacked-bar rendering
+- [ ] **Strike/dip markers**: orientation data at map positions for symbol rendering
+
 ## 4. Consumer Crates
 
 | Consumer | What it uses |

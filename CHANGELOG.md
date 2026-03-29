@@ -4,6 +4,15 @@ All notable changes to khanij are documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0]
+
+### Added
+- **bridge** — cross-crate primitive-value bridges for dravya (Mohs to Vickers, porosity to permeability, elastic to P-wave), ushma (depth to temperature, conductivity to heat flow), kimiya (element to oxide %, grade to yield)
+- **integration/soorat** — feature-gated `soorat-compat` module with visualization data structures: `GeologicGridVisualization` (rock type/age map from `GeologicGrid`), `CrystalVisualization` (unit cell lattice vectors), `StratColumnVisualization` (stacked layers), `StrikeDipMarker` (orientation symbols)
+
+### Updated
+- hisab 1.1.0 -> 1.3.0, badal 1.0.0 -> 1.1.0, dravya 1.0.0 -> 1.1.0, kimiya 1.0.0 -> 1.1.0, pravash 1.1.0 -> 1.2.0, ushma 1.0.0 -> 1.3.0, zerocopy 0.8.47 -> 0.8.48
+
 ### Changed
 
 - **f32 → f64 standardization** — all numeric types unified to `f64` across

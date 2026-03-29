@@ -17,6 +17,8 @@
 //! - **`weather`** — climate-driven weathering and erosion from atmospheric state
 //!   via [badal](https://crates.io/crates/badal).
 
+/// Cross-crate bridges — primitive-value conversions from other AGNOS science crates.
+pub mod bridge;
 pub mod crystal;
 pub mod crystallography;
 pub mod dating;
@@ -26,6 +28,8 @@ pub mod geochemistry;
 pub mod glaciology;
 pub mod grid;
 pub mod hydrothermal;
+/// Integration APIs for downstream consumers (soorat rendering).
+pub mod integration;
 pub mod mineral;
 pub mod ore;
 pub mod rock;
